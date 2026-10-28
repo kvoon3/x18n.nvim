@@ -44,19 +44,10 @@ local function render(bufnr, result)
   end
 end
 
---- Strict: only buffers the server actually attached to, so unrelated JSON/YAML
---- files in a session with an x18n project never trigger decoration requests.
-function M.refresh(bufnr)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
-  if not vim.api.nvim_buf_is_valid(bufnr) then
-    return
-  end
-  local client = vim.lsp.get_clients({ bufnr = bufnr, name = 'x18n' })[1]
-  if not client then
-    return
-  end
-
-  --[[ TextChanged fires per edit; only the last request in the debounce window runs. ]]
+--- Issue the decoration request for (bufnr, client) with debounce and warm-up retry.
+--- The client is passed in: during LspAttach the buffer is not yet in the client's
+--- attached list, so a get_clients({ bufnr }) lookup races and silently drops.
+function M.request(bufnr, client)
   local timer = pending[bufnr]
   if timer then
     timer:stop()
@@ -64,7 +55,7 @@ function M.refresh(bufnr)
   end
   pending[bufnr] = vim.defer_fn(function()
     pending[bufnr] = nil
-    if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
+    if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) or client:is_stopped() then
       return
     end
     client:request('x18n/decorations', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
@@ -85,7 +76,7 @@ function M.refresh(bufnr)
         retries[bufnr] = (retries[bufnr] or 0) + 1
         vim.defer_fn(function()
           if pending[bufnr] == nil then
-            M.refresh(bufnr)
+            M.request(bufnr, client)
           end
         end, 1000)
         return
@@ -96,6 +87,18 @@ function M.refresh(bufnr)
       end)
     end)
   end, cfg.debounce_ms)
+end
+
+function M.refresh(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+  local client = vim.lsp.get_clients({ bufnr = bufnr, name = 'x18n' })[1]
+  if not client then
+    return
+  end
+  M.request(bufnr, client)
 end
 
 function M.refresh_attached()
@@ -121,8 +124,9 @@ function M.setup(opts)
   aug('LspAttach', {
     group = group,
     callback = function(a)
-      if a.data and a.data.client_name == 'x18n' then
-        M.refresh(a.buf)
+      local client = vim.lsp.get_client_by_id(a.data.client_id)
+      if client and client.name == 'x18n' then
+        M.request(a.buf, client)
       end
     end,
   })
