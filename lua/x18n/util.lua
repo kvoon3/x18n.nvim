@@ -16,4 +16,18 @@ function M.to_byte(bufnr, pos)
   return pos.line, pos.character
 end
 
+--- Convert a byte column to an LSP (UTF-16 code unit) character offset.
+---@param bufnr integer
+---@param row integer
+---@param col integer
+---@return integer
+function M.to_utf16(bufnr, row, col)
+  local line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1] or ''
+  local ok, _, utf16 = pcall(vim.str_utfindex, line, 'utf-16', col)
+  if ok and type(utf16) == 'number' then
+    return utf16
+  end
+  return col
+end
+
 return M
