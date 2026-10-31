@@ -7,6 +7,7 @@ local cfg = {}
 local enabled = true
 local pending = {} -- bufnr -> uv timer
 local retries = {} -- bufnr -> warm-up poll count
+local locale_files = {} -- bufnr -> true once fileKeys proved it is a locale file
 
 local function define_highlights()
   vim.api.nvim_set_hl(0, 'X18nValue', { default = true, link = 'Comment' })
@@ -75,6 +76,50 @@ local function render(bufnr, result)
   end
 end
 
+--- Locale files get no inline decorations from the server; x18n/fileKeys gives
+--- their keys, so park the display-locale value at the end of each key's line.
+local function render_locale_file(bufnr, result)
+  if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
+    return
+  end
+  clear(bufnr)
+  for _, k in ipairs(result and result.keys or {}) do
+    local line = util.to_byte(bufnr, k.range.start)
+    local text = k.value and (' = ' .. k.value) or ' = missing'
+    vim.api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
+      virt_text = { { text, hl_for(k.value and 'ok' or 'missing') } },
+      virt_text_pos = 'eol',
+      hl_mode = 'combine',
+    })
+  end
+end
+
+--- Ask the server for the keys of a file. Calls back with the key list when the
+--- file holds locale definitions, and with nil when it does not (a code file, or
+--- the server still indexing). Without a callback it renders a known locale file.
+---@param bufnr integer
+---@param client vim.lsp.Client
+---@param on_result fun(keys: table[]?)? nil for the plain render path
+local function request_file_keys(bufnr, client, on_result)
+  client:request('x18n/fileKeys', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
+    require('x18n').debug(
+      ('fileKeys buf=%d err=%s keys=%s'):format(bufnr, tostring(err), tostring(result and result.keys and #result.keys))
+    )
+    if err then
+      return
+    end
+    local keys = result and result.keys or {}
+    if on_result then
+      return on_result(#keys > 0 and keys or nil)
+    end
+    if #keys > 0 then
+      vim.schedule(function()
+        render_locale_file(bufnr, { keys = keys })
+      end)
+    end
+  end)
+end
+
 --- Issue the decoration request for (bufnr, client) with debounce and warm-up retry.
 --- The client is passed in: during LspAttach the buffer is not yet in the client's
 --- attached list, so a get_clients({ bufnr }) lookup races and silently drops.
@@ -92,6 +137,9 @@ function M.request(bufnr, client)
     if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) or client:is_stopped() then
       return
     end
+    if locale_files[bufnr] then
+      return request_file_keys(bufnr, client)
+    end
     client:request('x18n/decorations', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
       require('x18n').debug(
         ('decorations buf=%d err=%s locale=%s n=%s'):format(
@@ -104,20 +152,31 @@ function M.request(bufnr, client)
       if err then
         return
       end
-      --[[ Right after LspAttach the server is still loading the project and answers
-        with an empty locale; poll until the real (possibly also empty) payload lands. ]]
-      if (result and result.locale or '') == '' and (retries[bufnr] or 0) < 5 then
-        retries[bufnr] = (retries[bufnr] or 0) + 1
-        vim.defer_fn(function()
-          if pending[bufnr] == nil then
-            M.request(bufnr, client)
-          end
-        end, 1000)
-        return
+      if result and result.decorations and #result.decorations > 0 then
+        retries[bufnr] = nil
+        return vim.schedule(function()
+          render(bufnr, result)
+        end)
       end
-      retries[bufnr] = nil
-      vim.schedule(function()
-        render(bufnr, result)
+      --[[ No decorations: either the server is still loading, the file simply has
+        no translate calls, or it is a locale file, which the server only answers
+        through x18n/fileKeys. Probe fileKeys to tell a locale file from a cold
+        server: the warm-up signature is empty keys plus an empty locale. ]]
+      request_file_keys(bufnr, client, function(keys)
+        if keys then
+          locale_files[bufnr] = true
+          return vim.schedule(function()
+            render_locale_file(bufnr, { keys = keys })
+          end)
+        end
+        if (result and result.locale or '') == '' and (retries[bufnr] or 0) < 5 then
+          retries[bufnr] = (retries[bufnr] or 0) + 1
+          vim.defer_fn(function()
+            if pending[bufnr] == nil then
+              M.request(bufnr, client)
+            end
+          end, 1000)
+        end
       end)
     end)
   end, cfg.debounce_ms)
@@ -175,6 +234,7 @@ function M.setup(opts)
         pending[a.buf] = nil
       end
       retries[a.buf] = nil
+      locale_files[a.buf] = nil
       clear(a.buf)
     end,
   })
