@@ -1,0 +1,6 @@
+{
+  "app": {
+    "title": "Hello x18n",
+    "description": "A playground for x18n.nvim"
+  }
+}
