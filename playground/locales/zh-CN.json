@@ -1,0 +1,10 @@
+{
+  "app.title": "任务看板",
+  "app.subtitle": "规划你的一周",
+  "button.save": "保存",
+  "button.cancel": "取消",
+  "task.new": "新建任务",
+  "task.empty": "还没有任务",
+  "task.count": "{count} 个任务",
+  "toast.saved": "保存成功"
+}
