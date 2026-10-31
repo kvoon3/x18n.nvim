@@ -9,7 +9,6 @@ local pending = {} -- bufnr -> uv timer
 local retries = {} -- bufnr -> warm-up poll count
 local locale_files = {} -- bufnr -> true once fileKeys proved it is a locale file
 local plain_files = {} -- bufnr -> true once a warm server proved it holds no keys
-local bumped_conceal = {} -- winid -> the conceallevel we found before raising it to 2
 
 local function define_highlights()
   vim.api.nvim_set_hl(0, 'X18nValue', { default = true, link = 'Comment' })
@@ -44,54 +43,6 @@ local function buffers_of(client)
     end
   end
   return out
-end
-
---- Conceal needs 'conceallevel' >= 2 in every window showing the buffer. Only
---- windows we raise ourselves are remembered, so the toggle can put them back.
---- With concealcursor left at its default the cursor's line reveals the raw
---- key, which keeps it editable.
-local function ensure_conceallevel(bufnr)
-  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
-    if vim.wo[win].conceallevel < 2 then
-      if bumped_conceal[win] == nil then
-        bumped_conceal[win] = vim.wo[win].conceallevel
-      end
-      vim.wo[win].conceallevel = 2
-    end
-  end
-end
-
---- Put the conceallevel of every window we raised back to what it was.
-local function restore_conceallevel()
-  for win, level in pairs(bumped_conceal) do
-    if vim.api.nvim_win_is_valid(win) then
-      vim.wo[win].conceallevel = level
-    end
-  end
-  bumped_conceal = {}
-end
-
---- Widen the conceal range over the quote characters around the key literal,
---- so `t('app.title')` reads `t(Hello)` and not `t('Hello')`. The server range
---- is half-open [s_col, e_col); a quote just before it and just after it means
---- quotes are not part of the range.
----@return integer s_line, integer s_col, integer e_line, integer e_col
-local function quoted_range(bufnr, range)
-  local s_line, s_col = util.to_byte(bufnr, range.start)
-  local e_line, e_col = util.to_byte(bufnr, range['end'])
-  if s_line ~= e_line then
-    return s_line, s_col, e_line, e_col
-  end
-  local line = vim.api.nvim_buf_get_lines(bufnr, s_line, s_line + 1, false)[1] or ''
-  --[[ Byte columns are 0-based, Lua sub is 1-based: the char before the range
-    start is 1-based s_col, the char at the exclusive end is 1-based e_col + 1. ]]
-  local before = line:sub(s_col, s_col)
-  local after = line:sub(e_col + 1, e_col + 1)
-  if before:match "['\"`]" and after:match "['\"`]" then
-    s_col = s_col - 1
-    e_col = e_col + 1
-  end
-  return s_line, s_col, e_line, e_col
 end
 
 -- Line numbers (0-based) carrying an x18n missing-key diagnostic this render.
@@ -129,7 +80,6 @@ local function index_missing_diagnostics(bufnr)
   missing_diag_lines[bufnr] = lines
   return next(lines) ~= nil
 end
-
 --- Toggle decorations for every attached buffer, clearing them when off.
 ---@return boolean the new state
 function M.toggle()
@@ -143,9 +93,6 @@ function M.toggle()
       end
     end
   end
-  if not enabled then
-    restore_conceallevel()
-  end
   return enabled
 end
 
@@ -157,30 +104,9 @@ local function render(bufnr, result)
     return
   end
   clear(bufnr)
-  local conceal = cfg.mode == 'conceal'
-  if conceal then
-    ensure_conceallevel(bufnr)
-  end
   index_missing_diagnostics(bufnr)
   for _, d in ipairs(result and result.decorations or {}) do
-    --[[ Conceal replaces the key literal with its value, i18n.nvim's
-      translation_conceal. Missing and dynamic keys keep the arrow form: hiding
-      the key would leave nothing to work from. In conceal mode no end-of-line
-      arrow is added for a concealed key: the cursor's line already reveals the
-      raw key text, and a second extmark would double-print the value. ]]
-    if conceal and d.state == 'ok' and d.value and d.value ~= '' and d.range then
-      local s_line, s_col, e_line, e_col = quoted_range(bufnr, d.range)
-      vim.api.nvim_buf_set_extmark(bufnr, ns, s_line, s_col, {
-        end_line = e_line,
-        end_col = e_col,
-        --[[ An empty cchar hides the range completely; any printable char
-          (a space included) leaves a visible gap before the closing paren. ]]
-        conceal = '',
-        virt_text = { { d.value, hl_for 'ok' } },
-        virt_text_pos = 'inline',
-        hl_mode = 'combine',
-      })
-    elseif d.state == 'missing' and has_missing_diagnostic(bufnr, d) then
+    if d.state == 'missing' and has_missing_diagnostic(bufnr, d) then
       --[[ The server publishes the same finding as a diagnostic on the same
         line; printing it a second time as virtual text only adds noise. ]]
     else
@@ -188,7 +114,7 @@ local function render(bufnr, result)
       local text = (d.value and d.value ~= '') and (' → ' .. d.value) or (' → ' .. (d.state or 'missing'))
       vim.api.nvim_buf_set_extmark(bufnr, ns, line, col, {
         virt_text = { { text, hl_for(d.state) } },
-        virt_text_pos = cfg.mode == 'eol' and 'eol' or 'inline',
+        virt_text_pos = cfg.virt_text_pos,
         hl_mode = 'combine',
       })
     end
@@ -337,14 +263,9 @@ function M.namespace()
   return ns
 end
 
----@param opts {mode: 'inline'|'eol'|'conceal'?, virt_text_pos: string?, debounce_ms: integer}
+---@param opts {virt_text_pos: string, debounce_ms: integer}
 function M.setup(opts)
   cfg = opts
-  --[[ `virt_text_pos` is the pre-conceal spelling of `mode`; keep both working. ]]
-  if not cfg.mode and cfg.virt_text_pos then
-    cfg.mode = cfg.virt_text_pos
-  end
-  cfg.mode = cfg.mode or 'inline'
   enabled = true
   define_highlights()
 
@@ -378,18 +299,6 @@ function M.setup(opts)
   aug('TextChanged', { group = group, callback = function(a) M.refresh(a.buf) end })
   aug('InsertLeave', { group = group, callback = function(a) M.refresh(a.buf) end })
   aug('ColorScheme', { group = group, callback = define_highlights })
-  if cfg.mode == 'conceal' then
-    --[[ A window opened on an already-decorated buffer needs the raised
-      conceallevel too; windows nobody decorated keep their own setting. ]]
-    aug('BufWinEnter', {
-      group = group,
-      callback = function(a)
-        if #vim.lsp.get_clients({ bufnr = a.buf, name = 'x18n' }) > 0 then
-          ensure_conceallevel(a.buf)
-        end
-      end,
-    })
-  end
 end
 
 return M
