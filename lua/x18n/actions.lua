@@ -112,11 +112,12 @@ function M.show_translations()
       return
     end
     if not err and result and result.contents then
-      local raw = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
-      --[[ The server's hover is markdown for a rendered pane; reformat its table
-        and command links for a plain scratch buffer. ]]
-      local lines = require('x18n.hover').format(raw)
-      if #lines > 0 then
+      --[[ The fork's hover carries the data structured in result.x18n; upstream
+        answers only markdown, which x18n/hover also knows how to reformat. ]]
+      local hover = require 'x18n.hover'
+      local lines = result.x18n and result.x18n.value and hover.from_value(result.x18n.value)
+        or hover.format(vim.lsp.util.convert_input_to_markdown_lines(result.contents))
+      if lines and #lines > 0 then
         shown = true
         vim.schedule(function()
           util.preview('x18n', lines)
@@ -147,6 +148,18 @@ function M.explain()
       util.preview('x18n explain', vim.split(result or 'nothing to explain', '\n'))
     end)
   end)
+end
+
+--- Default x18n buffer-local keymaps: `gn` opens the translations popup on a
+--- key and replays the original keys elsewhere (usually a no-op). Called on
+--- LspAttach from setup, which init.lua wires; this module loads lazily and
+--- would otherwise miss the attach.
+function M.default_keymaps(bufnr)
+  vim.keymap.set('n', 'gn', function()
+    if not M.show_translations() then
+      return vim.fn.feedkeys('gn', 'n')
+    end
+  end, { buffer = bufnr, desc = 'x18n: translations popup' })
 end
 
 return M

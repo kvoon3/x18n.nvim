@@ -6,7 +6,7 @@ The language server speaks plain LSP (completion, hover, rename, references, cod
 
 ## Features
 
-- **Inline translations** — shows the translated value right after every `t('key')` call (or at the end of the line), in the display locale of your choice. With `decorations = { mode = 'conceal' }` the key reads as its value, `t(Hello x18n)`, and the cursor's line shows the raw key with the value at the end of the line. Missing keys yield to the server's diagnostic instead of doubling it.
+- **Inline translations** — the key reads as its value, `t('app.title')` renders as `t(Hello x18n)`, in the display locale of your choice. The cursor's line falls back to the raw key with the value at the end of the line, so what you edit stays visible. `decorations = { mode = 'inline' }` shows an arrow after the call instead, `'eol'` parks it at the end of the line. Missing keys yield to the server's diagnostic instead of doubling it.
 - **Locale-file annotations** — inside `en.json`, `zh.json` and friends, each key line shows its value in the display locale at the end of the line, so you can translate against the source language.
 - **Usage report** — missing and unused keys as a quickfix list, with jumps into the exact locale files.
 - **Value search** — fuzzy search by translated value, pick a result and jump to its definition.
@@ -37,7 +37,9 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 The LSP client is configured and enabled automatically. Call `setup` with `lsp = false` to manage `vim.lsp.config('x18n', ...)` yourself (e.g. when [nvim-lspconfig](https://github.com/folke/nvim-lspconfig) ships its own definition), and with `decorations = false` to disable the inline annotations.
 
-Decorations take a `mode`: `'inline'` (default) puts the value right after the call, `'eol'` at the end of the line, and `'conceal'` replaces the key literal with the value, so `t('app.title')` reads `t(Hello x18n)`. In conceal mode the cursor's line falls back to the raw key with the value as an end-of-line arrow, redrawn as the cursor moves; `conceallevel` is raised to 2 in the windows it decorates and `:X18nToggleDecorations` puts it back. Missing keys always yield to the server's diagnostic instead of doubling it.
+Decorations take a `mode`: `'conceal'` (default) replaces the key literal with the value, so `t('app.title')` reads `t(Hello x18n)`, and the cursor's line falls back to the raw key with the value as an end-of-line arrow, redrawn as the cursor moves; `'inline'` puts the value right after the call, `'eol'` at the end of the line. In conceal mode `conceallevel` is raised to 2 in the windows it decorates and `:X18nToggleDecorations` puts it back. Missing keys always yield to the server's diagnostic instead of doubling it.
+
+`gn` is bound on x18n buffers: on a key it opens the translations popup, elsewhere it replays the original keys. Mouse hover shows the same data through whichever hover plugin you use (eagle.nvim renders the server hover, whose VS Code command links this plugin strips via the fork's `hoverCommands: false`).
 
 ## Commands
 

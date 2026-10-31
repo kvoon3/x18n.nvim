@@ -1,10 +1,51 @@
 local M = {}
 
--- Parse and re-render the x18n hover markdown into aligned plain text. The
--- server only ships hover as markdown: the table rows carry pipe characters
--- into a scratch buffer unaligned, and the trailing command links render as
--- raw URL-encoded noise. The shapes are fixed by the server, so the parsing
--- here is deliberately narrow.
+-- Render the x18n hover into aligned plain text. The fork at kvoon3/x18n
+-- (feat/structured-hover) attaches an `x18n` field to the hover response with
+-- the data pre-chewed; upstream servers only ship the markdown, which this
+-- module also parses as a fallback. The markdown shapes are fixed by the
+-- server, so the parsing stays deliberately narrow.
+
+--- Render the structured `x18n` hover value.
+---@param v table HoverValue from the server
+---@return string[] lines
+function M.from_value(v)
+  local out = { ('x18n %s'):format(v.key) }
+  if #v.locales > 0 then
+    out[#out + 1] = ''
+    local rows = {}
+    for _, l in ipairs(v.locales) do
+      rows[#rows + 1] = {
+        ('%s %s%s'):format(l.flag or '', l.code, l.source and ' (source)' or ''),
+        l.value == nil and '_missing_' or (l.value == '' and '_empty_' or l.value),
+        l.changed and vim.trim(vim.split(l.changed, '·')[1]) or '',
+      }
+    end
+    local w = { 1, 2, 3 }
+    for _, r in ipairs(rows) do
+      for c = 1, 3 do
+        w[c] = math.max(w[c], vim.fn.strdisplaywidth(r[c]))
+      end
+    end
+    for _, r in ipairs(rows) do
+      local cols = {}
+      for c = 1, 3 do
+        cols[#cols + 1] = r[c] .. string.rep(' ', w[c] - vim.fn.strdisplaywidth(r[c]) + (c < 3 and 1 or 0))
+      end
+      out[#out + 1] = table.concat(cols, ''):gsub('%s+$', '')
+    end
+  end
+  if #v.threads > 0 then
+    out[#out + 1] = ''
+    for _, t in ipairs(v.threads) do
+      out[#out + 1] = ('review %s: %s'):format(t.locale, t.state)
+    end
+  end
+  out[#out + 1] = ''
+  out[#out + 1] = ('%d usage%s'):format(v.usages, v.usages == 1 and '' or 's')
+  out[#out + 1] = 'actions: Open in UI, Copy translate prompt, Translate with agent (via :X18nOpenUi)'
+  return out
+end
 
 --- Cells of a markdown table row, or nil when the line is not one.
 ---@param line string

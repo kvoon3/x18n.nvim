@@ -6,7 +6,9 @@ local function marks_text()
   local marks = vim.api.nvim_buf_get_extmarks(ctx.buf, decorations.namespace(), 0, -1, { details = true })
   local out = {}
   for _, m in ipairs(marks) do
-    out[#out + 1] = m[4].virt_text[1][1]
+    if m[4].virt_text then
+      out[#out + 1] = m[4].virt_text[1][1]
+    end
   end
   return table.concat(out, '\n')
 end

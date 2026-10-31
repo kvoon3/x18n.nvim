@@ -15,15 +15,16 @@ local defaults = {
       'yaml',
     },
     root_markers = { 'x18n.config.ts', 'x18n.config.yml', 'x18n.config.json', 'package.json', '.git' },
-    init_options = { showFlags = true },
+    init_options = { showFlags = true, hoverCommands = false },
   },
   decorations = {
     enabled = true,
-    --[[ 'inline' shows the translation right after the t('key') call, VS Code style;
-      'eol' keeps code alignment intact by parking it at the end of the line;
-      'conceal' replaces the key literal with its value, and the cursor's line
-      falls back to the raw key with an end-of-line arrow. ]]
-    mode = 'inline',
+    --[[ 'conceal' (default) reads the key as its value, t(Hello x18n), and the
+      cursor's line falls back to the raw key with an end-of-line arrow;
+      'inline' shows the translation right after the t('key') call, VS Code
+      style; 'eol' keeps code alignment intact by parking it at the end of the
+      line. ]]
+    mode = 'conceal',
     debounce_ms = 400,
     cursor_redraw_ms = 100,
   },
@@ -78,6 +79,18 @@ function M.setup(opts)
       require('x18n.locales').warm()
       require('x18n.decorations').refresh_attached()
     end)
+    --[[ actions.lua loads lazily (first command); an autocmd registered there
+      would miss the attach, so setup wires the default keymaps itself. ]]
+    local group = vim.api.nvim_create_augroup('x18n_keymaps', { clear = true })
+    vim.api.nvim_create_autocmd('LspAttach', {
+      group = group,
+      callback = function(a)
+        local client = vim.lsp.get_client_by_id(a.data.client_id)
+        if client and client.name == 'x18n' then
+          require('x18n.actions').default_keymaps(a.buf)
+        end
+      end,
+    })
   end
   if type(M.config.decorations) == 'table' and M.config.decorations.enabled then
     require('x18n.decorations').setup(M.config.decorations)
