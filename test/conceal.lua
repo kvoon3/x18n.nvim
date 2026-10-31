@@ -32,8 +32,16 @@ for _, m in ipairs(vim.api.nvim_buf_get_extmarks(ctx.buf, ns, 0, -1, { details =
 end
 assert(concealed >= 2, ('expected the translated keys concealed, got %d'):format(concealed))
 assert(vim.tbl_contains(values, 'Hello x18n'), 'app.title value missing from ' .. table.concat(values, '|'))
--- app.missing.key must stay visible as an arrow.
-assert(arrowed >= 1, 'missing key lost its arrow decoration')
+-- The missing key carries an x18n missing-key diagnostic on its line, so no
+-- arrow virtual text repeats it in conceal mode.
+assert(arrowed == 0, ('missing key kept an arrow decoration (%d), expected the diagnostic to cover it'):format(arrowed))
+local missing_diag = false
+for _, diag in ipairs(vim.diagnostic.get(ctx.buf)) do
+  if diag.source == 'x18n' and diag.lnum == 11 then
+    missing_diag = true
+  end
+end
+assert(missing_diag, 'no x18n diagnostic on the missing-key line')
 
 -- The quoted literal is fully covered: the conceal range starts at the quote.
 local line = vim.api.nvim_buf_get_lines(ctx.buf, 10, 11, false)[1]

@@ -48,6 +48,8 @@ end
 
 --- Conceal needs 'conceallevel' >= 2 in every window showing the buffer. Only
 --- windows we raise ourselves are remembered, so the toggle can put them back.
+--- With concealcursor left at its default the cursor's line reveals the raw
+--- key, which keeps it editable.
 local function ensure_conceallevel(bufnr)
   for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
     if vim.wo[win].conceallevel < 2 then
@@ -92,6 +94,42 @@ local function quoted_range(bufnr, range)
   return s_line, s_col, e_line, e_col
 end
 
+-- Line numbers (0-based) carrying an x18n missing-key diagnostic this render.
+local missing_diag_lines = {}
+
+--- True when the server already publishes this decoration's missing key as a
+--- diagnostic on the same line, so the virtual-text arrow would be a repeat.
+--- False while no x18n diagnostic has landed yet, so the arrow keeps signaling
+--- the problem until the diagnostic replaces it.
+---@param bufnr integer
+---@param d table Decoration
+local function has_missing_diagnostic(bufnr, d)
+  local lines = missing_diag_lines[bufnr]
+  if not lines then
+    return false
+  end
+  local any_x18n = next(lines) ~= nil
+  if not any_x18n then
+    return false
+  end
+  local line = util.to_byte(bufnr, d.expression and d.expression.start or d.range.start)
+  return lines[line] == true
+end
+
+--- Rebuild the per-buffer missing-diagnostic line index. Called before every
+--- render pass; diagnostics arrive asynchronously with the server's changes.
+---@return boolean true when the buffer carries any x18n diagnostic
+local function index_missing_diagnostics(bufnr)
+  local lines = {}
+  for _, diag in ipairs(vim.diagnostic.get(bufnr)) do
+    if diag.source == 'x18n' and (diag.code == 'missing-key' or diag.user_data and type(diag.user_data) == 'table' and diag.user_data.key) then
+      lines[diag.lnum] = true
+    end
+  end
+  missing_diag_lines[bufnr] = lines
+  return next(lines) ~= nil
+end
+
 --- Toggle decorations for every attached buffer, clearing them when off.
 ---@return boolean the new state
 function M.toggle()
@@ -123,10 +161,13 @@ local function render(bufnr, result)
   if conceal then
     ensure_conceallevel(bufnr)
   end
+  index_missing_diagnostics(bufnr)
   for _, d in ipairs(result and result.decorations or {}) do
     --[[ Conceal replaces the key literal with its value, i18n.nvim's
       translation_conceal. Missing and dynamic keys keep the arrow form: hiding
-      the key would leave nothing to work from. ]]
+      the key would leave nothing to work from. In conceal mode no end-of-line
+      arrow is added for a concealed key: the cursor's line already reveals the
+      raw key text, and a second extmark would double-print the value. ]]
     if conceal and d.state == 'ok' and d.value and d.value ~= '' and d.range then
       local s_line, s_col, e_line, e_col = quoted_range(bufnr, d.range)
       vim.api.nvim_buf_set_extmark(bufnr, ns, s_line, s_col, {
@@ -139,6 +180,9 @@ local function render(bufnr, result)
         virt_text_pos = 'inline',
         hl_mode = 'combine',
       })
+    elseif d.state == 'missing' and has_missing_diagnostic(bufnr, d) then
+      --[[ The server publishes the same finding as a diagnostic on the same
+        line; printing it a second time as virtual text only adds noise. ]]
     else
       local line, col = util.to_byte(bufnr, d.expression['end'])
       local text = (d.value and d.value ~= '') and (' → ' .. d.value) or (' → ' .. (d.state or 'missing'))
