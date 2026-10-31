@@ -17,7 +17,20 @@ end, { nargs = '?', desc = 'x18n: search keys by translated value' })
 
 vim.api.nvim_create_user_command('X18nDisplayLocale', function(a)
   require('x18n.actions').set_display_locale(a.args)
-end, { nargs = 1, desc = 'x18n: switch the locale shown in hovers and decorations' })
+end, {
+  nargs = 1,
+  complete = function()
+    return require('x18n.locales').locales()
+  end,
+  desc = 'x18n: switch the locale shown in hovers and decorations',
+})
+
+vim.api.nvim_create_user_command('X18nNextLocale', function()
+  local locale = require('x18n.locales').next()
+  if not locale then
+    require('x18n').notify('no project locales known', vim.log.levels.WARN)
+  end
+end, { desc = 'x18n: cycle the display locale to the next project locale' })
 
 vim.api.nvim_create_user_command('X18nOpenUi', function()
   require('x18n.actions').open_ui()
