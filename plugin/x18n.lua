@@ -44,3 +44,14 @@ end, { desc = 'x18n: toggle inline translations on/off' })
 vim.api.nvim_create_user_command('X18nStatus', function()
   require('x18n.status').show()
 end, { desc = 'x18n: show projects, locales and translation progress' })
+
+vim.api.nvim_create_user_command('X18nKeys', function(a)
+  local action = a.args == 'copy' and 'copy_key' or 'jump'
+  require('x18n.keys').pick(action)
+end, {
+  nargs = '?',
+  complete = function()
+    return { 'copy' }
+  end,
+  desc = 'x18n: pick a key to jump to (arg: copy)',
+})

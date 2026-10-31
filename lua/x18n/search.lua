@@ -15,7 +15,7 @@ function M.select(items)
     if not choice or not choice.definition then
       return
     end
-    vim.lsp.util.jump_to_location(choice.definition, 'utf-16')
+    require('x18n.util').jump(choice.definition)
   end)
 end
 

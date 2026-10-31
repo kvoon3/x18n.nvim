@@ -16,6 +16,26 @@ function M.to_byte(bufnr, pos)
   return pos.line, pos.character
 end
 
+--- Open an LSP Location in the current window. Done by hand because both
+--- jump_to_location (deprecated) and show_document with focus build a tagstack
+--- entry from <cword>, which throws E348 when no word is under the cursor.
+---@param location table Location with uri and range
+---@return boolean opened
+function M.jump(location)
+  if not location or not location.uri then
+    return false
+  end
+  local bufnr = vim.uri_to_bufnr(location.uri)
+  vim.bo[bufnr].buflisted = true
+  vim.fn.bufload(bufnr)
+  local win = vim.fn.win_findbuf(bufnr)[1] or vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(win, bufnr)
+  vim.api.nvim_set_current_win(win)
+  local row, col = M.to_byte(bufnr, location.range.start)
+  vim.api.nvim_win_set_cursor(win, { row + 1, col })
+  return true
+end
+
 --- Open lines in a closable scratch float. Shared by status and explain.
 ---@param title string
 ---@param lines string[]
