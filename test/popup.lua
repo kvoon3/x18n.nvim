@@ -18,6 +18,10 @@ assert(actions.show_translations() == true, 'show_translations returned false on
 local text = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_get_current_buf(), 0, -1, false), '\n')
 assert(text:find('app%.title', 1, false), 'popup lost the key: ' .. text)
 assert(text:find('Hello x18n', 1, true) and text:find('你好 x18n', 1, true), 'popup lacks both locale values')
+-- The reformatted hover: no markdown table pipes, no URL-encoded links.
+assert(not text:find('|', 1, true), 'raw markdown pipes leaked: ' .. text)
+assert(not text:find('%5B', 1, true), 'encoded command link leaked: ' .. text)
+assert(text:find('usage', 1, true), 'usage line missing')
 vim.cmd 'close'
 
 -- Off a key: returns false so a keymap can fall through.

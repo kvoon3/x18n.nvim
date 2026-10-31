@@ -112,10 +112,10 @@ function M.show_translations()
       return
     end
     if not err and result and result.contents then
-      local lines = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
-      while #lines > 0 and lines[#lines] == '' do
-        lines[#lines] = nil
-      end
+      local raw = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
+      --[[ The server's hover is markdown for a rendered pane; reformat its table
+        and command links for a plain scratch buffer. ]]
+      local lines = require('x18n.hover').format(raw)
       if #lines > 0 then
         shown = true
         vim.schedule(function()
