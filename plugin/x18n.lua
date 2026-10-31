@@ -40,3 +40,7 @@ vim.api.nvim_create_user_command('X18nToggleDecorations', function()
   local on = require('x18n.decorations').toggle()
   require('x18n').notify(on and 'decorations on' or 'decorations off')
 end, { desc = 'x18n: toggle inline translations on/off' })
+
+vim.api.nvim_create_user_command('X18nStatus', function()
+  require('x18n.status').show()
+end, { desc = 'x18n: show projects, locales and translation progress' })
