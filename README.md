@@ -91,6 +91,8 @@ The pickers go through `vim.ui.select`, so [dressing.nvim](https://github.com/fo
 | jump to definition | `vim.lsp.buf.definition()` |
 | diagnostics | native LSP diagnostics from the server |
 | completion sources | native LSP completion (blink.cmp and nvim-cmp pick it up) |
+| `blink.cmp` / `nvim-cmp` source | no source needed: `completionProvider` with `'` `"` `` ` `` `.` `:` trigger characters; items carry the source value as detail and replace the whole key slot |
+| help like `vim.lsp.buf.signature_help()` | `require('x18n.actions').show_translations()` chains with a fallback, see the keymap example above |
 | `:I18nNextLocale` | `:X18nNextLocale` |
 | `:I18nToggleTranslation` | `:X18nToggleDecorations` |
 | `:I18nStatus` | `:X18nStatus` |
