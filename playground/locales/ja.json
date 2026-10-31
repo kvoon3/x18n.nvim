@@ -1,0 +1,10 @@
+{
+  "app.title": "タスクボード",
+  "app.subtitle": "一週間の予定を立てる",
+  "button.save": "保存",
+  "button.cancel": "キャンセル",
+  "task.new": "新しいタスク",
+  "task.empty": "タスクはまだありません",
+  "task.count": "{count} 件のタスク",
+  "toast.saved": "保存しました"
+}

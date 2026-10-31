@@ -1,0 +1,14 @@
+{
+  "name": "x18n.nvim-playground",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "nvim -u init.lua",
+    "check": "x18n check"
+  },
+  "devDependencies": {
+    "@x18n/cli": "^0.1.3",
+    "@x18n/core": "^0.1.3",
+    "@x18n/lsp": "^0.1.3"
+  }
+}

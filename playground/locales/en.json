@@ -1,0 +1,11 @@
+{
+  "app.title": "Task Board",
+  "app.subtitle": "Plan your week",
+  "button.save": "Save",
+  "button.cancel": "Cancel",
+  "task.new": "New task",
+  "task.empty": "No tasks yet",
+  "task.count": "{count} tasks",
+  "toast.saved": "Saved successfully",
+  "toast.legacy": "Old unused message"
+}

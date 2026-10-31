@@ -6,7 +6,7 @@ The language server speaks plain LSP (completion, hover, rename, references, cod
 
 ## Features
 
-- **Inline translations** — shows the translated value right after every `t('key')` call (or at the end of the line), in the display locale of your choice, with a distinct style for missing keys.
+- **Inline translations** — replaces every `t('key')` call with its translation in the display locale, concealing the source call; press `K` on a replaced call to see the original source plus every locale in a floating panel. Missing keys keep their source and get a red `→ missing` marker.
 - **Usage report** — missing and unused keys as a quickfix list, with jumps into the exact locale files.
 - **Value search** — fuzzy search by translated value, pick a result and jump to its definition.
 - **Extract hard strings** — rewrites the string literals of the current buffer into locale files (applied by the server via `workspace/applyEdit`).
@@ -31,6 +31,38 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```
 
 The LSP client is configured and enabled automatically. Call `setup` with `lsp = false` to manage `vim.lsp.config('x18n', ...)` yourself (e.g. when [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) ships its own definition), and with `decorations = false` to disable the inline annotations.
+
+## Configuration
+
+```lua
+{
+  'kvoon3/x18n.nvim',
+  opts = {
+    decorations = {
+      mode = 'replace', -- 'replace' | 'inline' (append after the call) | 'eol'
+      conceal = true, -- set conceallevel/concealcursor so the source call is hidden
+      wrap = false, -- nowrap while replacements are shown; insert restores wrapping
+    },
+    hover = {
+      keymap = 'K', -- buffer-local; false keeps the default LSP hover
+    },
+  },
+}
+```
+
+`replace` conceals the `t('key')` call and draws the translation in its place; insert mode drops the decorations so the real source is editable. `K` on a replaced call shows the hidden source line and the value of every locale, with the current display locale highlighted. `wrap = false` avoids a Neovim quirk where inline virtual text wraps against the concealed columns and pushes trailing punctuation onto its own row.
+
+## Playground
+
+`playground/` is a self-contained demo project (three locales, a missing key, an unused key, hard-coded strings) that runs against the local `@x18n/lsp`:
+
+```sh
+cd playground
+npm install
+nvim -u init.lua
+```
+
+The init prepends this repository to `runtimepath`, puts `playground/node_modules/.bin` first on `PATH`, and opens `src/main.ts`. Try `K` on a replaced call, `:X18nDisplayLocale zh-CN`, `:X18nUsageReport`, and `:X18nExtract` in `src/settings.ts`. See [`playground/README.md`](playground/README.md) for the full tour.
 
 ## Commands
 
