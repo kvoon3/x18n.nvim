@@ -32,6 +32,10 @@ vim.api.nvim_create_user_command('X18nNextLocale', function()
   end
 end, { desc = 'x18n: cycle the display locale to the next project locale' })
 
+vim.api.nvim_create_user_command('X18nNextDefinition', function()
+  require('x18n.actions').next_definition()
+end, { desc = 'x18n: jump to the key under the cursor in the next locale file' })
+
 vim.api.nvim_create_user_command('X18nOpenUi', function()
   require('x18n.actions').open_ui()
 end, { desc = 'x18n: open the web UI in the browser' })

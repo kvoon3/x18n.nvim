@@ -1,5 +1,7 @@
 local M = {}
 
+local util = require 'x18n.util'
+
 --- Extract hard strings of the current buffer into locale files.
 function M.extract()
   local init = require 'x18n'
@@ -49,6 +51,42 @@ function M.set_display_locale(locale)
   client:notify('x18n/setDisplayLocale', { locale = locale })
   init.notify('display locale: ' .. locale)
   require('x18n.decorations').refresh_attached()
+end
+
+--- Jump to the key under the cursor in the next locale file, wrapping around.
+--- Works both from a translate call and from inside a locale file.
+---@return string? opened uri
+function M.next_definition()
+  local init = require 'x18n'
+  local client = init.get_client()
+  if not client then
+    return nil
+  end
+  local bufnr = vim.api.nvim_get_current_buf()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  client:request('textDocument/implementation', {
+    textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+    position = { line = row - 1, character = col },
+  }, function(err, result)
+    if err then
+      return init.notify(err.message, vim.log.levels.WARN)
+    end
+    local locations = result or {}
+    if #locations == 0 then
+      return init.notify('no i18n key under the cursor')
+    end
+    local current_uri = vim.uri_from_bufnr(bufnr)
+    local idx = 0
+    for i, loc in ipairs(locations) do
+      if loc.uri == current_uri then
+        idx = i
+        break
+      end
+    end
+    local target = locations[idx % #locations + 1]
+    util.jump(target)
+    return target.uri
+  end)
 end
 
 return M
