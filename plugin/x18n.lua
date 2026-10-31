@@ -36,6 +36,16 @@ vim.api.nvim_create_user_command('X18nNextDefinition', function()
   require('x18n.actions').next_definition()
 end, { desc = 'x18n: jump to the key under the cursor in the next locale file' })
 
+vim.api.nvim_create_user_command('X18nShowTranslations', function()
+  if not require('x18n.actions').show_translations() then
+    require('x18n').notify('no i18n key under the cursor')
+  end
+end, { desc = 'x18n: popup with every locale of the key under the cursor' })
+
+vim.api.nvim_create_user_command('X18nExplain', function()
+  require('x18n.actions').explain()
+end, { desc = 'x18n: how the server understood the workspace' })
+
 vim.api.nvim_create_user_command('X18nOpenUi', function()
   require('x18n.actions').open_ui()
 end, { desc = 'x18n: open the web UI in the browser' })

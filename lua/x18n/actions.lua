@@ -89,4 +89,56 @@ function M.next_definition()
   end)
 end
 
+--- Popup with the key's value in every locale, from the server's hover data.
+--- Returns false when the cursor is not on a key, so a keymap can fall back
+--- (e.g. to signature help). Synchronous: the hover round trip is the wait.
+---@return boolean shown
+function M.show_translations()
+  local init = require 'x18n'
+  local client = init.get_client()
+  if not client then
+    return false
+  end
+  local bufnr = vim.api.nvim_get_current_buf()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local done, shown = false, false
+  client:request('textDocument/hover', {
+    textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+    position = { line = row - 1, character = col },
+  }, function(err, result)
+    if not err and result and result.contents then
+      local lines = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
+      while #lines > 0 and lines[#lines] == '' do
+        lines[#lines] = nil
+      end
+      if #lines > 0 then
+        shown = true
+        vim.schedule(function()
+          util.preview('x18n', lines)
+        end)
+      end
+    end
+    done = true
+  end)
+  vim.wait(500, function() return done end, 25)
+  return shown
+end
+
+--- How the server understood the workspace: config files, presets, resources.
+function M.explain()
+  local init = require 'x18n'
+  local client = init.get_client()
+  if not client then
+    return
+  end
+  client:request('x18n/explain', {}, function(err, result)
+    if err then
+      return init.notify(err.message, vim.log.levels.WARN)
+    end
+    vim.schedule(function()
+      util.preview('x18n explain', vim.split(result or 'nothing to explain', '\n'))
+    end)
+  end)
+end
+
 return M
