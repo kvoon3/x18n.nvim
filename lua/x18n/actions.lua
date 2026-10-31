@@ -150,16 +150,27 @@ function M.explain()
   end)
 end
 
---- Default x18n buffer-local keymaps: `gn` opens the translations popup on a
---- key and replays the original keys elsewhere (usually a no-op). Called on
---- LspAttach from setup, which init.lua wires; this module loads lazily and
---- would otherwise miss the attach.
+-- The `gh` fallback captured at first bind, per buffer. Rebinding must not
+-- recapture, or each rebind would wrap the previous x18n chain.
+local gh_fallback = {} -- bufnr -> function
+
+--- Chain `gh` on x18n buffers: the translations popup on a key, the binding
+--- that was there before elsewhere (usually LSP hover). Safe to call again:
+--- other clients attach after x18n and their LspAttach hooks rebind `gh`
+--- plain, so init.lua re-runs this on every attach and the original fallback
+--- is kept from the first capture.
 function M.default_keymaps(bufnr)
-  vim.keymap.set('n', 'gn', function()
-    if not M.show_translations() then
-      return vim.fn.feedkeys('gn', 'n')
+  if gh_fallback[bufnr] == nil then
+    local existing = vim.fn.maparg('gh', 'n', false, true)
+    gh_fallback[bufnr] = existing and existing.callback or function()
+      vim.lsp.buf.hover()
     end
-  end, { buffer = bufnr, desc = 'x18n: translations popup' })
+  end
+  vim.keymap.set('n', 'gh', function()
+    if not M.show_translations() then
+      return gh_fallback[bufnr]()
+    end
+  end, { buffer = bufnr, desc = 'x18n: translations popup or hover' })
 end
 
 return M

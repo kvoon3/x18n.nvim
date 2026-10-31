@@ -80,15 +80,19 @@ function M.setup(opts)
       require('x18n.decorations').refresh_attached()
     end)
     --[[ actions.lua loads lazily (first command); an autocmd registered there
-      would miss the attach, so setup wires the default keymaps itself. ]]
+      would miss the attach, so setup wires the default keymaps itself. Every
+      attach re-runs the chain, scheduled: another client's LspAttach (the TS
+      server attaches after x18n) rebinds `gh` plain, and the schedule lands
+      after all synchronous hooks, so the x18n chain ends up on top. ]]
     local group = vim.api.nvim_create_augroup('x18n_keymaps', { clear = true })
     vim.api.nvim_create_autocmd('LspAttach', {
       group = group,
       callback = function(a)
-        local client = vim.lsp.get_client_by_id(a.data.client_id)
-        if client and client.name == 'x18n' then
-          require('x18n.actions').default_keymaps(a.buf)
-        end
+        vim.schedule(function()
+          if #vim.lsp.get_clients({ bufnr = a.buf, name = 'x18n' }) > 0 then
+            require('x18n.actions').default_keymaps(a.buf)
+          end
+        end)
       end,
     })
   end

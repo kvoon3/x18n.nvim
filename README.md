@@ -39,7 +39,7 @@ The LSP client is configured and enabled automatically. Call `setup` with `lsp =
 
 Decorations take a `mode`: `'conceal'` (default) replaces the key literal with the value, so `t('app.title')` reads `t(Hello x18n)`, and the cursor's line falls back to the raw key with the value as an end-of-line arrow, redrawn as the cursor moves; `'inline'` puts the value right after the call, `'eol'` at the end of the line. In conceal mode `conceallevel` is raised to 2 in the windows it decorates and `:X18nToggleDecorations` puts it back. Missing keys always yield to the server's diagnostic instead of doubling it.
 
-`gn` is bound on x18n buffers: on a key it opens the translations popup, elsewhere it replays the original keys. Mouse hover shows the same data through whichever hover plugin you use (eagle.nvim renders the server hover, whose VS Code command links this plugin strips via the fork's `hoverCommands: false`).
+`gh` is chained on x18n buffers: on a key it opens the translations popup, elsewhere it falls back to your own hover binding. Mouse hover shows the same data through whichever hover plugin you use (eagle.nvim renders the server hover, whose VS Code command links this plugin strips via the fork's `hoverCommands: false`).
 
 ## Commands
 
