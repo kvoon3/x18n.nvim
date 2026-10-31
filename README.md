@@ -6,7 +6,7 @@ The language server speaks plain LSP (completion, hover, rename, references, cod
 
 ## Features
 
-- **Inline translations** — shows the translated value right after every `t('key')` call (or at the end of the line), in the display locale of your choice, with a distinct style for missing keys.
+- **Inline translations** — shows the translated value right after every `t('key')` call (or at the end of the line), in the display locale of your choice. With `decorations = { mode = 'conceal' }` the key reads as its value, `t(Hello x18n)`, and the cursor's line shows the raw key with the value at the end of the line. Missing keys yield to the server's diagnostic instead of doubling it.
 - **Locale-file annotations** — inside `en.json`, `zh.json` and friends, each key line shows its value in the display locale at the end of the line, so you can translate against the source language.
 - **Usage report** — missing and unused keys as a quickfix list, with jumps into the exact locale files.
 - **Value search** — fuzzy search by translated value, pick a result and jump to its definition.
@@ -36,6 +36,8 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```
 
 The LSP client is configured and enabled automatically. Call `setup` with `lsp = false` to manage `vim.lsp.config('x18n', ...)` yourself (e.g. when [nvim-lspconfig](https://github.com/folke/nvim-lspconfig) ships its own definition), and with `decorations = false` to disable the inline annotations.
+
+Decorations take a `mode`: `'inline'` (default) puts the value right after the call, `'eol'` at the end of the line, and `'conceal'` replaces the key literal with the value, so `t('app.title')` reads `t(Hello x18n)`. In conceal mode the cursor's line falls back to the raw key with the value as an end-of-line arrow, redrawn as the cursor moves; `conceallevel` is raised to 2 in the windows it decorates and `:X18nToggleDecorations` puts it back. Missing keys always yield to the server's diagnostic instead of doubling it.
 
 ## Commands
 
@@ -96,7 +98,7 @@ The pickers go through `vim.ui.select`, so [dressing.nvim](https://github.com/fo
 | locale-file EOL translations | always on in the display locale; `:X18nToggleDecorations` toggles them together with the inline ones |
 | `:I18nReload` | automatic: the server watches files |
 | `:I18nEnable` / `:I18nDisable` | LSP root markers activate the server per project |
-| `:I18nToggleOrigin` | not applicable: code text is never concealed |
+| `:I18nToggleOrigin` | the cursor's line always shows the raw key in conceal mode; `:X18nToggleDecorations` switches the whole overlay off |
 | `sources` / `locales` config | [`x18n.config.ts`](https://x18n.dev) in the project, not plugin opts |
 
 ## Debugging

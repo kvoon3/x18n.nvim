@@ -20,9 +20,12 @@ local defaults = {
   decorations = {
     enabled = true,
     --[[ 'inline' shows the translation right after the t('key') call, VS Code style;
-      'eol' keeps code alignment intact by parking it at the end of the line. ]]
-    virt_text_pos = 'inline',
+      'eol' keeps code alignment intact by parking it at the end of the line;
+      'conceal' replaces the key literal with its value, and the cursor's line
+      falls back to the raw key with an end-of-line arrow. ]]
+    mode = 'inline',
     debounce_ms = 400,
+    cursor_redraw_ms = 100,
   },
 }
 
