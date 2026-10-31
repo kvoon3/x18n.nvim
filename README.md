@@ -7,11 +7,16 @@ The language server speaks plain LSP (completion, hover, rename, references, cod
 ## Features
 
 - **Inline translations** — shows the translated value right after every `t('key')` call (or at the end of the line), in the display locale of your choice, with a distinct style for missing keys.
+- **Locale-file annotations** — inside `en.json`, `zh.json` and friends, each key line shows its value in the display locale at the end of the line, so you can translate against the source language.
 - **Usage report** — missing and unused keys as a quickfix list, with jumps into the exact locale files.
 - **Value search** — fuzzy search by translated value, pick a result and jump to its definition.
+- **Key picker** — all keys of the workspace through `vim.ui.select` (so it uses whichever picker you have configured), with jump and copy actions.
+- **Add missing keys** — an interactive per-locale input writes the key under the cursor into the locale files.
+- **Locale cycling** — cycle the display locale, and cycle the key under the cursor through the locale files that define it.
+- **Translations popup** — every locale of the key under the cursor in one float, with usage counts.
 - **Extract hard strings** — rewrites the string literals of the current buffer into locale files (applied by the server via `workspace/applyEdit`).
-- **Display locale switch** — changes the locale used by hovers, inlay hints and decorations on the fly.
 - **Web UI** — opens the x18n web UI in your browser.
+- **Status and explain** — translation progress per locale, and how the server understood the workspace.
 - `:checkhealth x18n` support.
 
 ## Requirements
@@ -30,26 +35,84 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 }
 ```
 
-The LSP client is configured and enabled automatically. Call `setup` with `lsp = false` to manage `vim.lsp.config('x18n', ...)` yourself (e.g. when [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) ships its own definition), and with `decorations = false` to disable the inline annotations.
+The LSP client is configured and enabled automatically. Call `setup` with `lsp = false` to manage `vim.lsp.config('x18n', ...)` yourself (e.g. when [nvim-lspconfig](https://github.com/folke/nvim-lspconfig) ships its own definition), and with `decorations = false` to disable the inline annotations.
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `:X18nExtract` | Extract hard strings of the current buffer into locale files |
+| `:X18nShowTranslations` | Popup with every locale of the key under the cursor |
+| `:X18nNextDefinition` | Jump to the key under the cursor in the next locale file |
+| `:X18nAddKey [key]` | Add the key under the cursor (or the given key) to the locale files |
+| `:X18nKeys [copy]` | Pick a key and jump to it, or copy the key |
 | `:X18nUsageReport` | List missing and unused keys in the quickfix |
 | `:X18nSearch [query]` | Search keys by translated value, jump to the chosen definition |
-| `:X18nDisplayLocale {locale}` | Switch the locale shown in hovers and decorations |
+| `:X18nExtract` | Extract hard strings of the current buffer into locale files |
+| `:X18nNextLocale` | Cycle the display locale |
+| `:X18nDisplayLocale {locale}` | Switch the locale shown in hovers and decorations (completes) |
+| `:X18nToggleDecorations` | Hide and restore the inline translations |
+| `:X18nStatus` | Show projects, locales and translation progress |
+| `:X18nExplain` | Show how the server understood the workspace |
 | `:X18nOpenUi` | Open the x18n web UI in the browser |
+
+Everything is also reachable as Lua for keymaps:
+
+```lua
+vim.keymap.set('n', '<leader>tt', function() require('x18n.actions').show_translations() end)
+vim.keymap.set('n', '<leader>tn', function() require('x18n.locales').next() end)
+vim.keymap.set('n', '<leader>tj', function() require('x18n.actions').next_definition() end)
+```
+
+`show_translations` returns `false` when the cursor is not on a key, so it chains with a fallback:
+
+```lua
+vim.keymap.set({ 'n', 'i' }, '<C-k>', function()
+  if not require('x18n.actions').show_translations() then
+    vim.lsp.buf.signature_help()
+  end
+end)
+```
+
+The pickers go through `vim.ui.select`, so [dressing.nvim](https://github.com/folke/dressing.nvim), [telescope-ui-select](https://github.com/nvim-telescope/telescope-ui-select.nvim) or [snacks.nvim](https://github.com/folke/snacks.nvim) render them in your picker of choice.
+
+## Coming from i18n.nvim
+
+[yelog/i18n.nvim](https://github.com/yelog/i18n.nvim) parses locale files inside the plugin. Here the server owns parsing and analysis, so several of its features are native LSP and need no command:
+
+| i18n.nvim | Here |
+| --- | --- |
+| `:I18nShowTranslations` | `:X18nShowTranslations` |
+| `:I18nDefinitionNextLocale` | `:X18nNextDefinition` |
+| `:I18nAddKey` | `:X18nAddKey` (refuses keys that already exist) |
+| `i18n_keys` picker | `:X18nKeys` |
+| `:I18nKeyUsages` | `vim.lsp.buf.references()` |
+| jump to definition | `vim.lsp.buf.definition()` |
+| diagnostics | native LSP diagnostics from the server |
+| completion sources | native LSP completion (blink.cmp and nvim-cmp pick it up) |
+| `:I18nNextLocale` | `:X18nNextLocale` |
+| `:I18nToggleTranslation` | `:X18nToggleDecorations` |
+| `:I18nStatus` | `:X18nStatus` |
+| `:I18nDetectFramework` | `:X18nExplain` |
+| locale-file EOL translations | on by default, in the display locale |
+| `:I18nReload` | automatic: the server watches files |
+| `:I18nEnable` / `:I18nDisable` | LSP root markers activate the server per project |
+| `:I18nToggleOrigin` | not applicable: code text is never concealed |
+| `sources` / `locales` config | [`x18n.config.ts`](https://x18n.dev) in the project, not plugin opts |
 
 ## Debugging
 
-Set `vim.g.x18n_debug = true` to log protocol requests and responses. See `:checkhealth x18n` for a status overview.
+Set `vim.g.x18n_debug = true` to log protocol requests and responses. Run `:X18nExplain` when the server finds nothing, and see `:checkhealth x18n` for a status overview.
+
+The repository carries a headless test suite against a real server:
+
+```sh
+for t in test/*.lua; do nvim -l test/harness.lua "$t"; done
+```
 
 ## Roadmap
 
-- Locale tree explorer (`x18n/tree`), translation progress (`x18n/progress`)
-- Picker adapters (Snacks, fzf-lua, mini.pick) for `:X18nSearch`
+- Locale tree explorer (`x18n/tree`), review threads (`x18n/reviews`)
+- Copy translate prompt (`x18n/translatePrompt`)
 
 ## License
 
