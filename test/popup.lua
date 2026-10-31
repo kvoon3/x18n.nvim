@@ -13,16 +13,35 @@ local function cursor_onto(buf, pattern)
   return false
 end
 
+-- A helper: the hover float never takes the cursor, so find it by buffer name.
+local function hover_buf()
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    local b = vim.api.nvim_win_get_buf(w)
+    if vim.api.nvim_buf_get_name(b):find('x18n$') then
+      return b
+    end
+  end
+end
+
 assert(cursor_onto(ctx.buf, 'app%.title'), 'lost app.title call')
 assert(actions.show_translations() == true, 'show_translations returned false on a key')
-local text = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_get_current_buf(), 0, -1, false), '\n')
+assert(ctx.wait_for(function()
+  return hover_buf() ~= nil
+end, 5000), 'popup never opened')
+local text = table.concat(vim.api.nvim_buf_get_lines(hover_buf(), 0, -1, false), '\n')
 assert(text:find('app%.title', 1, false), 'popup lost the key: ' .. text)
 assert(text:find('Hello x18n', 1, true) and text:find('你好 x18n', 1, true), 'popup lacks both locale values')
 -- The reformatted hover: no markdown table pipes, no URL-encoded links.
 assert(not text:find('|', 1, true), 'raw markdown pipes leaked: ' .. text)
 assert(not text:find('%5B', 1, true), 'encoded command link leaked: ' .. text)
 assert(text:find('usage', 1, true), 'usage line missing')
-vim.cmd 'close'
+-- The hover float stays open until the cursor moves in the parent window.
+assert(hover_buf() ~= nil, 'hover float missing before the move')
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
+assert(ctx.wait_for(function()
+  return hover_buf() == nil
+end, 3000), 'hover float did not close on cursor move')
 
 -- Off a key: returns false so a keymap can fall through.
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
@@ -32,7 +51,15 @@ assert(actions.show_translations() == false, 'show_translations true off-key')
 -- UTF-16, not a byte offset.
 assert(cursor_onto(ctx.buf, 'app%.description'), 'lost app.description call')
 assert(actions.show_translations() == true, 'UTF-16 position missed the key after CJK text')
-vim.cmd 'close'
+assert(ctx.wait_for(function()
+  return hover_buf() ~= nil
+end, 5000), 'CJK popup never opened')
+local b = hover_buf()
+for _, w in ipairs(vim.api.nvim_list_wins()) do
+  if vim.api.nvim_win_get_buf(w) == b then
+    vim.api.nvim_win_close(w, true)
+  end
+end
 
 actions.explain()
 assert(ctx.wait_for(function()

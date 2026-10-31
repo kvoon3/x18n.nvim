@@ -120,7 +120,7 @@ function M.show_translations()
       if lines and #lines > 0 then
         shown = true
         vim.schedule(function()
-          util.preview('x18n', lines)
+          util.preview('x18n', lines, { hover = true })
         end)
       end
     end

@@ -69,15 +69,24 @@ function M.jump(location)
 end
 
 --- Open lines in a closable scratch float. Shared by status and explain.
+--- `opts.hover` styles it like an LSP hover instead: markdown filetype for
+--- treesitter rendering, and the float closes when the cursor moves in the
+--- window that spawned it (focusing the float or `q` still works). The
+--- stock open_floating_preview dies on BufLeave bookkeeping under `nvim -l`,
+--- so the close logic is small and ours.
 ---@param title string
 ---@param lines string[]
+---@param opts { hover: boolean? }?
 ---@return integer winid, integer bufnr
-function M.preview(title, lines)
+function M.preview(title, lines, opts)
+  opts = opts or {}
   --[[ Wipe the previous float's buffer: it survives `q` (only the window closes),
     and naming a fresh buffer the same would throw E95. ]]
   if last_buf ~= nil and vim.api.nvim_buf_is_valid(last_buf) and #vim.fn.win_findbuf(last_buf) == 0 then
     vim.api.nvim_buf_delete(last_buf, { force = true })
   end
+  local parent_win = vim.api.nvim_get_current_win()
+  local parent_buf = vim.api.nvim_get_current_buf()
   local bufnr = vim.api.nvim_create_buf(false, true)
   last_buf = bufnr
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
@@ -90,7 +99,10 @@ function M.preview(title, lines)
   end
   width = math.min(width + 2, math.floor(vim.o.columns * 0.8))
   local height = math.min(#lines, math.floor(vim.o.lines * 0.8))
-  local winid = vim.api.nvim_open_win(bufnr, true, {
+  --[[ A hover float must not take the cursor: movement anywhere closes it.
+    Status and explain keep the cursor (enter = true) since they are read at
+    length and `q` dismisses them. ]]
+  local winid = vim.api.nvim_open_win(bufnr, not opts.hover, {
     relative = 'editor',
     title = ' ' .. title .. ' ',
     title_pos = 'center',
@@ -102,6 +114,28 @@ function M.preview(title, lines)
     border = 'rounded',
   })
   vim.keymap.set('n', 'q', function() vim.api.nvim_win_close(winid, true) end, { buffer = bufnr, silent = true })
+  --[[ Hover mode only changes closing: the float dismisses on cursor movement
+    in the window that spawned it, like a native hover. No markdown styling:
+    the bundled markdown query conceals nothing, so markup would render raw. ]]
+  if opts.hover then
+    local group = vim.api.nvim_create_augroup('x18n_hover_close', { clear = true })
+    vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
+      group = group,
+      buffer = parent_buf,
+      callback = function()
+        if vim.api.nvim_win_is_valid(winid) and vim.api.nvim_get_current_win() ~= winid then
+          vim.api.nvim_win_close(winid, true)
+        end
+      end,
+    })
+    vim.api.nvim_create_autocmd('WinClosed', {
+      group = group,
+      pattern = tostring(winid),
+      callback = function()
+        vim.api.nvim_del_augroup_by_name('x18n_hover_close')
+      end,
+    })
+  end
   return winid, bufnr
 end
 

@@ -6,7 +6,8 @@ local M = {}
 -- module also parses as a fallback. The markdown shapes are fixed by the
 -- server, so the parsing stays deliberately narrow.
 
---- Render the structured `x18n` hover value.
+--- Render the structured `x18n` hover value as aligned plain text. No markup:
+--- the bundled markdown query conceals nothing, so markers would show raw.
 ---@param v table HoverValue from the server
 ---@return string[] lines
 function M.from_value(v)
@@ -15,24 +16,26 @@ function M.from_value(v)
     out[#out + 1] = ''
     local rows = {}
     for _, l in ipairs(v.locales) do
+      local suffix = l.source and ' (source)' or ''
+      if l.changed and l.changed ~= '' then
+        suffix = suffix .. ' · ' .. vim.trim(vim.split(l.changed, '·')[1])
+      end
+      if l.outdated then
+        suffix = suffix .. ' · outdated'
+      end
       rows[#rows + 1] = {
-        ('%s %s%s'):format(l.flag or '', l.code, l.source and ' (source)' or ''),
+        ('%s %s%s'):format(l.flag or '', l.code, suffix),
         l.value == nil and '_missing_' or (l.value == '' and '_empty_' or l.value),
-        l.changed and vim.trim(vim.split(l.changed, '·')[1]) or '',
       }
     end
-    local w = { 1, 2, 3 }
+    local w = { 1, 2 }
     for _, r in ipairs(rows) do
-      for c = 1, 3 do
+      for c = 1, 2 do
         w[c] = math.max(w[c], vim.fn.strdisplaywidth(r[c]))
       end
     end
     for _, r in ipairs(rows) do
-      local cols = {}
-      for c = 1, 3 do
-        cols[#cols + 1] = r[c] .. string.rep(' ', w[c] - vim.fn.strdisplaywidth(r[c]) + (c < 3 and 1 or 0))
-      end
-      out[#out + 1] = table.concat(cols, ''):gsub('%s+$', '')
+      out[#out + 1] = (r[1] .. string.rep(' ', w[1] - vim.fn.strdisplaywidth(r[1]) + 2) .. r[2]):gsub('%s+$', '')
     end
   end
   if #v.threads > 0 then
@@ -43,7 +46,6 @@ function M.from_value(v)
   end
   out[#out + 1] = ''
   out[#out + 1] = ('%d usage%s'):format(v.usages, v.usages == 1 and '' or 's')
-  out[#out + 1] = 'actions: Open in UI, Copy translate prompt, Translate with agent (via :X18nOpenUi)'
   return out
 end
 
