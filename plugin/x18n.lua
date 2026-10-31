@@ -36,6 +36,13 @@ vim.api.nvim_create_user_command('X18nOpenUi', function()
   require('x18n.actions').open_ui()
 end, { desc = 'x18n: open the web UI in the browser' })
 
+vim.api.nvim_create_user_command('X18nAddKey', function(a)
+  require('x18n.add_key').run(a.args ~= '' and a.args or nil)
+end, {
+  nargs = '?',
+  desc = 'x18n: add the key under the cursor (or the given key) to the locale files',
+})
+
 vim.api.nvim_create_user_command('X18nToggleDecorations', function()
   local on = require('x18n.decorations').toggle()
   require('x18n').notify(on and 'decorations on' or 'decorations off')
