@@ -4,6 +4,7 @@ local util = require 'x18n.util'
 
 local ns = vim.api.nvim_create_namespace 'x18n_decoration'
 local cfg = {}
+local enabled = true
 local pending = {} -- bufnr -> uv timer
 local retries = {} -- bufnr -> warm-up poll count
 
@@ -28,6 +29,36 @@ local function clear(bufnr)
   end
 end
 
+--- Buffers the client is attached to. `vim.lsp.get_buffers_by_client_id` is
+--- deprecated on 0.12; the attached-buffers lookup is its replacement.
+---@param client vim.lsp.Client
+---@return integer[]
+local function buffers_of(client)
+  local out = {}
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.lsp.buf_is_attached(bufnr, client.id) then
+      out[#out + 1] = bufnr
+    end
+  end
+  return out
+end
+
+--- Toggle decorations for every attached buffer, clearing them when off.
+---@return boolean the new state
+function M.toggle()
+  enabled = not enabled
+  for _, client in ipairs(vim.lsp.get_clients({ name = 'x18n' })) do
+    for _, bufnr in ipairs(buffers_of(client)) do
+      if enabled then
+        M.request(bufnr, client)
+      else
+        clear(bufnr)
+      end
+    end
+  end
+  return enabled
+end
+
 local function render(bufnr, result)
   if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
     return
@@ -48,6 +79,9 @@ end
 --- The client is passed in: during LspAttach the buffer is not yet in the client's
 --- attached list, so a get_clients({ bufnr }) lookup races and silently drops.
 function M.request(bufnr, client)
+  if not enabled then
+    return
+  end
   local timer = pending[bufnr]
   if timer then
     timer:stop()
@@ -103,7 +137,7 @@ end
 
 function M.refresh_attached()
   for _, client in ipairs(vim.lsp.get_clients({ name = 'x18n' })) do
-    for _, bufnr in ipairs(vim.lsp.get_buffers_by_client_id(client.id)) do
+    for _, bufnr in ipairs(buffers_of(client)) do
       M.refresh(bufnr)
     end
   end
@@ -117,6 +151,7 @@ end
 ---@param opts {virt_text_pos: string, debounce_ms: integer}
 function M.setup(opts)
   cfg = opts
+  enabled = true
   define_highlights()
 
   local group = vim.api.nvim_create_augroup('x18n_decoration', { clear = true })

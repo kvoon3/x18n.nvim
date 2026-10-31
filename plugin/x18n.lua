@@ -22,3 +22,8 @@ end, { nargs = 1, desc = 'x18n: switch the locale shown in hovers and decoration
 vim.api.nvim_create_user_command('X18nOpenUi', function()
   require('x18n.actions').open_ui()
 end, { desc = 'x18n: open the web UI in the browser' })
+
+vim.api.nvim_create_user_command('X18nToggleDecorations', function()
+  local on = require('x18n.decorations').toggle()
+  require('x18n').notify(on and 'decorations on' or 'decorations off')
+end, { desc = 'x18n: toggle inline translations on/off' })
