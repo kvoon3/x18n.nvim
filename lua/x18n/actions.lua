@@ -66,7 +66,7 @@ function M.next_definition()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   client:request('textDocument/implementation', {
     textDocument = { uri = vim.uri_from_bufnr(bufnr) },
-    position = { line = row - 1, character = col },
+    position = { line = row - 1, character = util.to_utf16(bufnr, row - 1, col) },
   }, function(err, result)
     if err then
       return init.notify(err.message, vim.log.levels.WARN)
@@ -101,11 +101,16 @@ function M.show_translations()
   end
   local bufnr = vim.api.nvim_get_current_buf()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  local done, shown = false, false
+  local done, shown, cancelled = false, false, false
   client:request('textDocument/hover', {
     textDocument = { uri = vim.uri_from_bufnr(bufnr) },
-    position = { line = row - 1, character = col },
+    position = { line = row - 1, character = util.to_utf16(bufnr, row - 1, col) },
   }, function(err, result)
+    if cancelled then
+      --[[ The wait below already returned false; opening now would fire both the
+      caller's fallback and the popup. ]]
+      return
+    end
     if not err and result and result.contents then
       local lines = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
       while #lines > 0 and lines[#lines] == '' do
@@ -121,6 +126,9 @@ function M.show_translations()
     done = true
   end)
   vim.wait(500, function() return done end, 25)
+  if not done then
+    cancelled = true
+  end
   return shown
 end
 

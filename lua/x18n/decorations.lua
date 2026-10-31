@@ -8,6 +8,7 @@ local enabled = true
 local pending = {} -- bufnr -> uv timer
 local retries = {} -- bufnr -> warm-up poll count
 local locale_files = {} -- bufnr -> true once fileKeys proved it is a locale file
+local plain_files = {} -- bufnr -> true once a warm server proved it holds no keys
 
 local function define_highlights()
   vim.api.nvim_set_hl(0, 'X18nValue', { default = true, link = 'Comment' })
@@ -61,6 +62,9 @@ function M.toggle()
 end
 
 local function render(bufnr, result)
+  if not enabled then
+    return
+  end
   if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
     return
   end
@@ -79,6 +83,9 @@ end
 --- Locale files get no inline decorations from the server; x18n/fileKeys gives
 --- their keys, so park the display-locale value at the end of each key's line.
 local function render_locale_file(bufnr, result)
+  if not enabled then
+    return
+  end
   if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
     return
   end
@@ -160,8 +167,12 @@ function M.request(bufnr, client)
       end
       --[[ No decorations: either the server is still loading, the file simply has
         no translate calls, or it is a locale file, which the server only answers
-        through x18n/fileKeys. Probe fileKeys to tell a locale file from a cold
-        server: the warm-up signature is empty keys plus an empty locale. ]]
+        through x18n/fileKeys. A plain (key-less) file is remembered so later
+        refreshes skip the probe; the warm-up signature is empty keys plus an
+        empty locale. ]]
+      if plain_files[bufnr] then
+        return
+      end
       request_file_keys(bufnr, client, function(keys)
         if keys then
           locale_files[bufnr] = true
@@ -169,7 +180,11 @@ function M.request(bufnr, client)
             render_locale_file(bufnr, { keys = keys })
           end)
         end
-        if (result and result.locale or '') == '' and (retries[bufnr] or 0) < 5 then
+        if (result and result.locale or '') ~= '' then
+          plain_files[bufnr] = true
+          return
+        end
+        if (retries[bufnr] or 0) < 5 then
           retries[bufnr] = (retries[bufnr] or 0) + 1
           vim.defer_fn(function()
             if pending[bufnr] == nil then
@@ -235,6 +250,7 @@ function M.setup(opts)
       end
       retries[a.buf] = nil
       locale_files[a.buf] = nil
+      plain_files[a.buf] = nil
       clear(a.buf)
     end,
   })

@@ -1,5 +1,7 @@
 local M = {}
 
+local last_buf = nil -- preview scratch buffer of the previous float
+
 --- Convert an LSP (UTF-16 code unit) position to API byte positions.
 --- Locale values are frequently CJK, where UTF-16 columns and byte columns diverge.
 ---@param bufnr integer
@@ -14,6 +16,36 @@ function M.to_byte(bufnr, pos)
     return pos.line, byte_col
   end
   return pos.line, pos.character
+end
+
+--- Convert an API byte position to LSP UTF-16 code units (the protocol column).
+--- Requests must send UTF-16; multibyte text before the cursor (CJK comments)
+--- pulls byte and UTF-16 columns apart. The inverse of to_byte.
+---@param bufnr integer
+---@param row integer zero-based line
+---@param col integer zero-based byte column
+---@return integer character
+function M.to_utf16(bufnr, row, col)
+  local line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1] or ''
+  local units = 0
+  local i = 1
+  while i <= col and i <= #line do
+    local byte = line:byte(i)
+    if byte < 0x80 then
+      i = i + 1
+      units = units + 1
+    elseif byte < 0xE0 then
+      i = i + 2
+      units = units + 1
+    elseif byte < 0xF0 then
+      i = i + 3
+      units = units + 1
+    else
+      i = i + 4
+      units = units + 2
+    end
+  end
+  return units
 end
 
 --- Open an LSP Location in the current window. Done by hand because both
@@ -41,10 +73,16 @@ end
 ---@param lines string[]
 ---@return integer winid, integer bufnr
 function M.preview(title, lines)
+  --[[ Wipe the previous float's buffer: it survives `q` (only the window closes),
+    and naming a fresh buffer the same would throw E95. ]]
+  if last_buf ~= nil and vim.api.nvim_buf_is_valid(last_buf) and #vim.fn.win_findbuf(last_buf) == 0 then
+    vim.api.nvim_buf_delete(last_buf, { force = true })
+  end
   local bufnr = vim.api.nvim_create_buf(false, true)
+  last_buf = bufnr
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
   vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
-  vim.api.nvim_buf_set_name(bufnr, title)
+  pcall(vim.api.nvim_buf_set_name, bufnr, title)
 
   local width = 1
   for _, line in ipairs(lines) do

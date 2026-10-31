@@ -43,4 +43,12 @@ asked = {}
 assert(cursor_onto('app%.title'), 'fixture lost app.title')
 require('x18n.add_key').run()
 assert(#asked == 0, 'existing key entered the add flow')
+
+-- An explicit brand-new key (used nowhere) goes through; an explicit existing
+-- one is refused by the tree check.
+asked = {}
+require('x18n.add_key').run 'brand.new.key'
+assert(#asked == 2, 'explicit new key did not reach the per-locale inputs: ' .. #asked)
+require('x18n.add_key').run 'app.title'
+assert(#asked == 2, 'explicit existing key entered the flow')
 print('add_key ok')

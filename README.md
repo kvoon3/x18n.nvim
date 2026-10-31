@@ -11,7 +11,7 @@ The language server speaks plain LSP (completion, hover, rename, references, cod
 - **Usage report** — missing and unused keys as a quickfix list, with jumps into the exact locale files.
 - **Value search** — fuzzy search by translated value, pick a result and jump to its definition.
 - **Key picker** — all keys of the workspace through `vim.ui.select` (so it uses whichever picker you have configured), with jump and copy actions.
-- **Add missing keys** — an interactive per-locale input writes the key under the cursor into the locale files.
+- **Add missing keys** — an interactive per-locale input stages the key under the cursor in the locale files, as unsaved buffers you review and save (like extract).
 - **Locale cycling** — cycle the display locale, and cycle the key under the cursor through the locale files that define it.
 - **Translations popup** — every locale of the key under the cursor in one float, with usage counts.
 - **Extract hard strings** — rewrites the string literals of the current buffer into locale files (applied by the server via `workspace/applyEdit`).
@@ -83,8 +83,8 @@ The pickers go through `vim.ui.select`, so [dressing.nvim](https://github.com/fo
 | --- | --- |
 | `:I18nShowTranslations` | `:X18nShowTranslations` |
 | `:I18nDefinitionNextLocale` | `:X18nNextDefinition` |
-| `:I18nAddKey` | `:X18nAddKey` (refuses keys that already exist) |
-| `i18n_keys` picker | `:X18nKeys` |
+| `:I18nAddKey` | `:X18nAddKey` (refuses keys that already exist; edits stay unsaved for review) |
+| `i18n_keys` picker | `:X18nKeys` (jump and copy; no split, vsplit or choose-locale opens) |
 | `:I18nKeyUsages` | `vim.lsp.buf.references()` |
 | jump to definition | `vim.lsp.buf.definition()` |
 | diagnostics | native LSP diagnostics from the server |
@@ -93,7 +93,7 @@ The pickers go through `vim.ui.select`, so [dressing.nvim](https://github.com/fo
 | `:I18nToggleTranslation` | `:X18nToggleDecorations` |
 | `:I18nStatus` | `:X18nStatus` |
 | `:I18nDetectFramework` | `:X18nExplain` |
-| locale-file EOL translations | on by default, in the display locale |
+| locale-file EOL translations | always on in the display locale; `:X18nToggleDecorations` toggles them together with the inline ones |
 | `:I18nReload` | automatic: the server watches files |
 | `:I18nEnable` / `:I18nDisable` | LSP root markers activate the server per project |
 | `:I18nToggleOrigin` | not applicable: code text is never concealed |

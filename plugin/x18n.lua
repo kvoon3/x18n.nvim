@@ -20,7 +20,12 @@ vim.api.nvim_create_user_command('X18nDisplayLocale', function(a)
 end, {
   nargs = 1,
   complete = function()
-    return require('x18n.locales').locales()
+    local locales = require 'x18n.locales'
+    local list = locales.cached()
+    if #list == 0 then
+      locales.warm()
+    end
+    return list
   end,
   desc = 'x18n: switch the locale shown in hovers and decorations',
 })

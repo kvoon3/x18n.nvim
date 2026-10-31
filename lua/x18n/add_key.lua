@@ -1,11 +1,13 @@
 local M = {}
 
---- Position of the cursor as LSP params.
+local util = require 'x18n.util'
+
+--- Position of the cursor as LSP params, in the protocol's UTF-16 columns.
 local function cursor_params(bufnr)
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   return {
     uri = vim.uri_from_bufnr(bufnr),
-    position = { line = row - 1, character = col },
+    position = { line = row - 1, character = util.to_utf16(bufnr, row - 1, col) },
   }
 end
 
@@ -20,7 +22,9 @@ local function write(writes, key, project)
   end
   local function send(i)
     if i > #writes then
-      return require('x18n').notify(("added %s to %d locale(s)"):format(key, #writes))
+      --[[ The edits are staged in modified buffers (workspace/applyEdit), like
+        extract; saving is the user's review step. ]]
+      return init.notify(("added %s to %d locale(s) — unsaved buffers, review and save"):format(key, #writes))
     end
     client:request('workspace/executeCommand', {
       command = 'x18n.set',
@@ -90,6 +94,33 @@ local function is_undefined(key, project)
   return found
 end
 
+--- True when something already occupies the key's path in the tree. Used for
+--- explicit keys, which usageReport cannot judge (it only knows used keys).
+---@param key string
+---@param project string?
+---@return boolean
+local function key_exists(key, project)
+  local client = require('x18n').client()
+  if not client then
+    return false
+  end
+  local parent = key:match '^(.*)%.'
+  local found, done = false, false
+  client:request('x18n/tree', { project = project, parent = parent }, function(err, result)
+    if not err then
+      for _, node in ipairs(result or {}) do
+        if node.key == key then
+          found = true
+          break
+        end
+      end
+    end
+    done = true
+  end)
+  vim.wait(2000, function() return done end, 50)
+  return found
+end
+
 --- Ask for one value per locale, source first, and write each with x18n.set.
 --- Empty input skips the locale; every locale empty aborts without writing.
 ---@param key_arg string?
@@ -103,8 +134,16 @@ function M.run(key_arg)
   if not key then
     return init.notify('no i18n key under the cursor')
   end
-  if not is_undefined(key, project) then
-    return init.notify(("'%s' is already defined (or unused) — edit it in the locale files"):format(key), vim.log.levels.WARN)
+  --[[ Two gates: the cursor flow only writes keys code already uses but nothing
+    defines; an explicit key only needs to be absent from the tree. ]]
+  local occupied
+  if key_arg and key_arg ~= '' then
+    occupied = key_exists(key, project)
+  else
+    occupied = not is_undefined(key, project)
+  end
+  if occupied then
+    return init.notify(("'%s' is already defined — edit it in the locale files"):format(key), vim.log.levels.WARN)
   end
 
   local locales = require('x18n.locales').locales()

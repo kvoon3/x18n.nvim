@@ -16,9 +16,10 @@ local function list(client, on_result)
         value = sym.containerName or '',
         location = sym.location,
       }
-    end
-    if #entries >= 500 then
-      require('x18n').notify 'showing the first 500 keys'
+      if #entries == 500 then
+        require('x18n').notify 'showing the first 500 keys'
+        break
+      end
     end
     vim.schedule(function()
       on_result(entries)

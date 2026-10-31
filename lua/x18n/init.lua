@@ -72,6 +72,7 @@ function M.setup(opts)
 
   if M.config.lsp then
     require('x18n.lsp').setup(M.config.lsp, function()
+      require('x18n.locales').warm()
       require('x18n.decorations').refresh_attached()
     end)
   end

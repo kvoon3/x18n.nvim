@@ -6,7 +6,13 @@ local plugin_root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':h:
 local playground = plugin_root .. '/playground'
 
 vim.opt.runtimepath:prepend(plugin_root)
-require('x18n').setup {}
+-- Pin the server to the vendored binary so tests exercise the exact version
+-- the protocol analysis was written against, not whatever is on PATH.
+require('x18n').setup {
+  lsp = {
+    cmd = { 'node', playground .. '/node_modules/.bin/x18n-lsp', '--stdio' },
+  },
+}
 
 local function wait_for(cond, timeout_ms)
   timeout_ms = timeout_ms or 15000

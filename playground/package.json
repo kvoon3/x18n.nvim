@@ -1,0 +1,9 @@
+{
+  "name": "x18n.nvim-playground",
+  "private": true,
+  "devDependencies": {
+    "@x18n/cli": "^0.1.3",
+    "@x18n/core": "^0.1.3",
+    "@x18n/lsp": "^0.1.3"
+  }
+}

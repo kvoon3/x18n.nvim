@@ -24,10 +24,21 @@ vim.cmd 'close'
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 assert(actions.show_translations() == false, 'show_translations true off-key')
 
+-- A key preceded on its own line by multibyte text: the request column must be
+-- UTF-16, not a byte offset.
+assert(cursor_onto(ctx.buf, 'app%.description'), 'lost app.description call')
+assert(actions.show_translations() == true, 'UTF-16 position missed the key after CJK text')
+vim.cmd 'close'
+
 actions.explain()
 assert(ctx.wait_for(function()
   return vim.api.nvim_buf_get_name(0):find('x18n explain') ~= nil
 end, 5000), 'explain float never opened')
 local explained = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_get_current_buf(), 0, -1, false), '\n')
 assert(#explained > 0, 'explain float empty')
+
+-- A second float in the same session must not trip over the first buffer's name.
+vim.cmd 'close'
+require('x18n.status').show()
+assert(vim.api.nvim_buf_get_name(0):find('x18n status') ~= nil, 'second float failed to open')
 print('popup/explain ok')
