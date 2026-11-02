@@ -14,8 +14,17 @@ local function cursor_onto(pattern)
 end
 assert(cursor_onto('app%.missing%.key'), 'fixture lost the missing-key call')
 
-local answers = { en = 'A missing title', zh = '缺失的标题' }
+local answers = {
+  en = 'A missing title',
+  ['zh-CN'] = '缺失的标题',
+  ja = '欠けているタイトル',
+  fr = 'Un titre manquant',
+}
 local asked = {}
+local notes = {}
+vim.notify = function(msg)
+  notes[#notes + 1] = msg
+end
 vim.ui.input = function(opts, on_choice)
   local locale = opts.prompt:match('%[([%w-]+)%]')
   asked[#asked + 1] = locale
@@ -24,19 +33,36 @@ end
 
 require('x18n.add_key').run()
 
+for _, code in ipairs({ 'en', 'zh-CN', 'ja', 'fr' }) do
+  local buf = vim.fn.bufadd(ctx.playground .. '/locales/' .. code .. '.json')
+  assert(ctx.wait_for(function()
+    local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), '\n')
+    return text:find('missing', 1, false) and text:find(answers[code], 1, true)
+  end, 8000), code .. '.json never received the new key')
+end
+
+local order = require('x18n.locales').locales()
+assert(#order == 4, 'expected four locales, got ' .. table.concat(order, ','))
+assert(
+  #asked == #order and (function()
+    for i, code in ipairs(order) do
+      if asked[i] ~= code then
+        return false
+      end
+    end
+    return true
+  end)(),
+  'asked wrong locales: ' .. table.concat(asked, ',')
+)
+
 assert(ctx.wait_for(function()
-  local en_buf = vim.fn.bufadd(ctx.playground .. '/locales/en.json')
-  local text = table.concat(vim.api.nvim_buf_get_lines(en_buf, 0, -1, false), '\n')
-  return text:find('missing', 1, false) and text:find('A missing title', 1, true)
-end, 8000), 'en.json never received the new key')
-
-local zh_buf = vim.fn.bufadd(ctx.playground .. '/locales/zh.json')
-ctx.wait_for(function()
-  local text = table.concat(vim.api.nvim_buf_get_lines(zh_buf, 0, -1, false), '\n')
-  return text:find('缺失的标题', 1, true)
-end, 8000)
-
-assert(#asked == 2 and asked[1] == 'en' and asked[2] == 'zh', 'asked wrong locales: ' .. table.concat(asked, ','))
+  for _, msg in ipairs(notes) do
+    if msg:find('added app.missing.key to 4 locale', 1, true) then
+      return true
+    end
+  end
+  return false
+end, 8000), 'add-key success notification never arrived')
 
 -- Refuse to overwrite: an existing key must not enter the flow.
 asked = {}
@@ -48,7 +74,7 @@ assert(#asked == 0, 'existing key entered the add flow')
 -- one is refused by the tree check.
 asked = {}
 require('x18n.add_key').run 'brand.new.key'
-assert(#asked == 2, 'explicit new key did not reach the per-locale inputs: ' .. #asked)
+assert(#asked == #order, 'explicit new key did not reach the per-locale inputs: ' .. #asked)
 require('x18n.add_key').run 'app.title'
-assert(#asked == 2, 'explicit existing key entered the flow')
+assert(#asked == #order, 'explicit existing key entered the flow')
 print('add_key ok')

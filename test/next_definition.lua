@@ -1,7 +1,14 @@
--- Next-locale definition: cycles en.json -> zh.json -> en.json for one key,
--- from both a code file and from inside a locale file.
+-- Next-locale definition: the server reports locales as en, fr, ja, zh-CN;
+-- each jump lands on the next locale file for the key, with wrap.
 local ctx = ...
 local actions = require 'x18n.actions'
+
+local titles = {
+  en = 'Hello x18n',
+  fr = 'Bonjour x18n',
+  ja = 'こんにちは x18n',
+  ['zh-CN'] = '你好 x18n',
+}
 
 local function cursor_onto(buf, pattern)
   for i, l in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
@@ -18,17 +25,27 @@ local function current_name()
   return (vim.api.nvim_buf_get_name(0):match('[^/]+$'))
 end
 
--- From the code file.
+local order = require('x18n.locales').locales()
+assert(#order == 4 and order[1] == 'en', 'unexpected locale order: ' .. table.concat(order, ','))
+
+-- From the code file the first jump lands on the source locale, then each
+-- locale in the server's order, then wraps.
 assert(cursor_onto(ctx.buf, 'app%.title'), 'lost app.title call')
 actions.next_definition()
-assert(ctx.wait_for(function() return current_name() == 'en.json' end, 5000), 'first jump missed en.json: ' .. current_name())
+assert(ctx.wait_for(function() return current_name() == order[1] .. '.json' end, 5000), 'first jump missed ' .. order[1] .. '.json: ' .. current_name())
+assert(vim.api.nvim_get_current_line():find(titles[order[1]], 1, true), 'first jump landed on the wrong value')
+for i = 2, #order do
+  actions.next_definition()
+  assert(ctx.wait_for(function() return current_name() == order[i] .. '.json' end, 5000), ('jump %d missed %s.json: %s'):format(i, order[i], current_name()))
+  assert(vim.api.nvim_get_current_line():find(titles[order[i]], 1, true), ('jump %d landed on the wrong value in %s'):format(i, order[i]))
+end
 actions.next_definition()
-assert(ctx.wait_for(function() return current_name() == 'zh.json' end, 5000), 'second jump missed zh.json: ' .. current_name())
-actions.next_definition()
-assert(ctx.wait_for(function() return current_name() == 'en.json' end, 5000), 'wrap missed en.json: ' .. current_name())
+assert(ctx.wait_for(function() return current_name() == order[1] .. '.json' end, 5000), 'wrap missed ' .. order[1] .. '.json: ' .. current_name())
+assert(vim.api.nvim_get_current_line():find(titles[order[1]], 1, true), 'wrap landed on the wrong value')
 
 -- From inside a locale file, onto the key line.
-assert(cursor_onto(vim.api.nvim_get_current_buf(), 'title'), 'lost title key in en.json')
+assert(cursor_onto(vim.api.nvim_get_current_buf(), 'title'), 'lost title key in ' .. order[1] .. '.json')
 actions.next_definition()
-assert(ctx.wait_for(function() return current_name() == 'zh.json' end, 5000), 'locale-file jump missed zh.json: ' .. current_name())
+assert(ctx.wait_for(function() return current_name() == order[2] .. '.json' end, 5000), 'locale-file jump missed ' .. order[2] .. '.json: ' .. current_name())
+assert(vim.api.nvim_get_current_line():find(titles[order[2]], 1, true), 'locale-file jump landed on the wrong value')
 print('next_definition ok')

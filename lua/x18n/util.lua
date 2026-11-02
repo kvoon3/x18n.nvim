@@ -46,20 +46,32 @@ function M.to_utf16(bufnr, row, col)
   return units
 end
 
---- Open an LSP Location in the current window. Done by hand because both
---- jump_to_location (deprecated) and show_document with focus build a tagstack
---- entry from <cword>, which throws E348 when no word is under the cursor.
+--- Open an LSP Location. Done by hand because both jump_to_location
+--- (deprecated) and show_document with focus build a tagstack entry from
+--- <cword>, which throws E348 when no word is under the cursor.
 ---@param location table Location with uri and range
+---@param open_cmd string? edit, split, vsplit or tabedit
 ---@return boolean opened
-function M.jump(location)
+function M.jump(location, open_cmd)
   if not location or not location.uri then
     return false
+  end
+  open_cmd = open_cmd or (require('x18n').config.navigation or {}).open_cmd or 'edit'
+  if open_cmd ~= 'edit' and open_cmd ~= 'split' and open_cmd ~= 'vsplit' and open_cmd ~= 'tabedit' then
+    open_cmd = 'edit'
   end
   local bufnr = vim.uri_to_bufnr(location.uri)
   vim.bo[bufnr].buflisted = true
   vim.fn.bufload(bufnr)
-  local win = vim.fn.win_findbuf(bufnr)[1] or vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_buf(win, bufnr)
+  local win
+  if open_cmd == 'edit' then
+    win = vim.fn.win_findbuf(bufnr)[1] or vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(win, bufnr)
+  else
+    vim.cmd(open_cmd)
+    win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(win, bufnr)
+  end
   vim.api.nvim_set_current_win(win)
   local row, col = M.to_byte(bufnr, location.range.start)
   vim.api.nvim_win_set_cursor(win, { row + 1, col })

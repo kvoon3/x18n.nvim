@@ -20,13 +20,37 @@ local defaults = {
   decorations = {
     enabled = true,
     --[[ 'conceal' (default) reads the key as its value, t(Hello x18n), and the
-      cursor's line falls back to the raw key with an end-of-line arrow;
-      'inline' shows the translation right after the t('key') call, VS Code
-      style; 'eol' keeps code alignment intact by parking it at the end of the
-      line. ]]
+      cursor's line falls back to the raw key with an end-of-line arrow. The
+      i18n.nvim names both, translation, translation_conceal and origin work
+      too; 'inline' puts the value after the call and 'eol' parks it at the end
+      of the line. ]]
     mode = 'conceal',
+    --[[ Locale files always show the display-locale value at the end of each
+      key line; usage badges ride beside it when the server reports counts. ]]
+    show_locale_file_eol_translation = true,
+    show_locale_file_eol_usage = true,
     debounce_ms = 400,
     cursor_redraw_ms = 100,
+  },
+  --[[ How definition, usage and picker jumps open a file. ]]
+  navigation = {
+    open_cmd = 'edit',
+  },
+  --[[ Keymaps inside the translations float. copy_key accepts one string or a
+    list of strings. ]]
+  translation_popup = {
+    keys = {
+      copy_key = { '<C-y>' },
+    },
+  },
+  --[[ Diagnostic presentation. false suppresses x18n diagnostics and clears the
+    ones already shown; a table is forwarded to vim.diagnostic.config for the
+    server's namespace. Missing-key arrows return when diagnostics are off. ]]
+  diagnostic = true,
+  usage = {
+    --[[ :X18nKeyUsages warns when the cursor is not on a key; upstream exposes
+      the same switch. ]]
+    notify_no_key = true,
   },
 }
 
@@ -82,12 +106,16 @@ function M.setup(opts)
     --[[ actions.lua loads lazily (first command); an autocmd registered there
       would miss the attach, so setup wires the default keymaps itself. Every
       attach re-runs the chain, scheduled: another client's LspAttach (the TS
-      server attaches after x18n) rebinds `gh` plain, and the schedule lands
-      after all synchronous hooks, so the x18n chain ends up on top. ]]
+      server attaches after x18n) rebinds `gh`/`gd` plain, and the schedule
+      lands after all synchronous hooks, so the x18n chain ends up on top. ]]
     local group = vim.api.nvim_create_augroup('x18n_keymaps', { clear = true })
     vim.api.nvim_create_autocmd('LspAttach', {
       group = group,
       callback = function(a)
+        local client = vim.lsp.get_client_by_id(a.data.client_id)
+        if client and client.name == 'x18n' then
+          require('x18n.lsp').apply_diagnostics(client)
+        end
         vim.schedule(function()
           if #vim.lsp.get_clients({ bufnr = a.buf, name = 'x18n' }) > 0 then
             require('x18n.actions').default_keymaps(a.buf)

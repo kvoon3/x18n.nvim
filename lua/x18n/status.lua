@@ -48,6 +48,7 @@ function M.show()
   vim.wait(2000, function() return done end, 50)
 
   local lines = {}
+  local decorations = require 'x18n.decorations'
   for _, project in ipairs(projects) do
     if #lines > 0 then
       lines[#lines + 1] = ''
@@ -58,6 +59,8 @@ function M.show()
       lines[#lines + 1] = l
     end
     lines[#lines + 1] = '  display locale ' .. project.displayLocale
+    lines[#lines + 1] = '  show mode ' .. decorations.get_mode()
+    lines[#lines + 1] = '  locale-file EOL ' .. (decorations.locale_file_eol() and 'on' or 'off')
   end
   --[[ The native float without close events: status stays until dismissed,
     and the border comes from the user's config, not from here. ]]

@@ -20,6 +20,9 @@ assert(got.value:find('1 usage', 1, true), 'usage count missing')
 -- The fork's hover markdown is a bullet list; no pipe tables anywhere.
 assert(not got.value:find('|', 1, true), 'table pipes leaked: ' .. got.value)
 assert(got.value:find('%- .*en', 1, false), 'locale bullet missing')
+for _, value in ipairs({ 'Hello x18n', '你好 x18n', 'こんにちは x18n', 'Bonjour x18n' }) do
+  assert(got.value:find(value, 1, true), 'hover lost ' .. value .. ': ' .. got.value)
+end
 -- The fork's structured field rides along untouched.
 local struct = nil
 client:request('textDocument/hover', {
@@ -30,5 +33,5 @@ client:request('textDocument/hover', {
 end)
 assert(ctx.wait_for(function() return struct ~= nil end, 5000), 'structured x18n field never arrived')
 assert(struct.key == 'app.title', 'structured key wrong: ' .. tostring(struct.key))
-assert(#struct.locales == 2, 'structured locales wrong')
+assert(#struct.locales == 4, 'structured locales wrong: ' .. tostring(#struct.locales))
 print('hover clean ok')

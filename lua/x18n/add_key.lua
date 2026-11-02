@@ -24,7 +24,7 @@ local function write(writes, key, project)
     if i > #writes then
       --[[ The edits are staged in modified buffers (workspace/applyEdit), like
         extract; saving is the user's review step. ]]
-      return init.notify(("added %s to %d locale(s) — unsaved buffers, review and save"):format(key, #writes))
+      return require('x18n').notify(("added %s to %d locale(s) — unsaved buffers, review and save"):format(key, #writes))
     end
     client:request('workspace/executeCommand', {
       command = 'x18n.set',
@@ -119,6 +119,34 @@ local function key_exists(key, project)
   end)
   vim.wait(2000, function() return done end, 50)
   return found
+end
+
+--- Ask for one value and write it to a single locale. Used by the code action,
+--- which is why the prompt is client-side rather than part of the edit.
+---@param key string
+---@param locale string
+function M.add_one(key, locale)
+  if not key or not locale then
+    return
+  end
+  local project
+  local client = require('x18n').client()
+  if client then
+    local done, result = false, nil
+    client:request('x18n/keyAt', cursor_params(vim.api.nvim_get_current_buf()), function(err, res)
+      result = not err and res or nil
+      done = true
+    end)
+    vim.wait(2000, function() return done end, 25)
+    if result and result.key == key then
+      project = result.project
+    end
+  end
+  vim.ui.input({ prompt = ('%s [%s] '):format(key, locale), default = '' }, function(value)
+    if value and value ~= '' then
+      write({ { locale = locale, value = value } }, key, project)
+    end
+  end)
 end
 
 --- Ask for one value per locale, source first, and write each with x18n.set.

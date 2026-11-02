@@ -2,16 +2,14 @@ local M = {}
 
 local util = require 'x18n.util'
 
-local function qf_item(entry, kind, label)
-  local loc = entry.location or {}
-  local uri = loc.uri
-  local range = loc.range or { start = { line = 0, character = 0 } }
+local function qf_item(entry, kind, label, loc)
+  local range = loc and loc.range or { start = { line = 0, character = 0 } }
   local item = {
     text = ('[%s] %s'):format(label, entry.key),
     type = kind,
   }
-  if uri then
-    local fname = vim.uri_to_fname(uri)
+  if loc and loc.uri then
+    local fname = vim.uri_to_fname(loc.uri)
     local bufnr = vim.fn.bufadd(fname)
     if vim.fn.bufloaded(bufnr) == 0 then
       vim.fn.bufload(bufnr)
@@ -24,6 +22,19 @@ local function qf_item(entry, kind, label)
   return item
 end
 
+--- Missing entries carry every usage site; unused entries carry one definition.
+local function entry_items(entry, kind, label)
+  local locations = entry.locations or (entry.location and { entry.location }) or {}
+  if #locations == 0 then
+    return { qf_item(entry, kind, label, nil) }
+  end
+  local items = {}
+  for _, loc in ipairs(locations) do
+    items[#items + 1] = qf_item(entry, kind, label, loc)
+  end
+  return items
+end
+
 function M.show(report)
   local sections = {
     { report.missing, 'E', 'missing' },
@@ -32,14 +43,16 @@ function M.show(report)
   local items = {}
   for _, section in ipairs(sections) do
     for _, entry in ipairs(section[1] or {}) do
-      items[#items + 1] = qf_item(entry, section[2], section[3])
+      for _, item in ipairs(entry_items(entry, section[2], section[3])) do
+        items[#items + 1] = item
+      end
     end
   end
   table.sort(items, function(a, b)
     if a.filename ~= b.filename then
       return (a.filename or '') < (b.filename or '')
     end
-    return a.lnum < b.lnum
+    return (a.lnum or 0) < (b.lnum or 0)
   end)
 
   if #items == 0 then

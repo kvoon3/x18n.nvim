@@ -3,6 +3,7 @@ local M = {}
 -- Cache of the projects/locales reply, refreshed on demand.
 local info = nil
 local warming = false
+local display_override = nil
 
 --- Fire the x18n/projects request without waiting, filling the cache when the
 --- answer lands. Called from completion and on server changes, where blocking
@@ -68,6 +69,107 @@ function M.cached()
     out[#out + 1] = l.code
   end
   return out
+end
+
+--- The locale currently shown in hovers and decorations. Non-blocking: the
+--- explicit switch wins while the projects cache is cold.
+---@return string?
+function M.display_locale()
+  local projects = info
+  if not projects then
+    M.warm()
+    return display_override
+  end
+  return (projects[1] and projects[1].displayLocale) or display_override
+end
+
+--- Keep the cached project info in step after a display-locale switch.
+---@param locale string
+function M.set_display(locale)
+  display_override = locale
+  if info and info[1] then
+    info[1].displayLocale = locale
+  end
+  M.warm()
+end
+
+--- The structured hover value at a position, when the server provides it.
+---@param client vim.lsp.Client
+---@param uri string
+---@param position table LSP position, already in UTF-16 columns
+---@param on_result fun(value: table?)
+function M.hover_value(client, uri, position, on_result)
+  client:request('textDocument/hover', {
+    textDocument = { uri = uri },
+    position = position,
+  }, function(err, result)
+    on_result(not err and result and result.x18n and result.x18n.value or nil)
+  end)
+end
+
+--- Every locale definition of the key at a position, paired with its code.
+--- The server sorts implementation locations by project locale order; hover
+--- says which locales actually own a value.
+---@param on_result fun(pairs: {code: string, location: table}[], value: table?)
+function M.key_locations(client, uri, position, on_result)
+  M.hover_value(client, uri, position, function(value)
+    client:request('textDocument/implementation', {
+      textDocument = { uri = uri },
+      position = position,
+    }, function(err, locations)
+      locations = not err and locations or {}
+      local codes = {}
+      if value and value.locales then
+        for _, locale in ipairs(value.locales) do
+          if locale.value ~= nil then
+            codes[#codes + 1] = locale.code
+          end
+        end
+      else
+        codes = M.cached()
+        if #codes == 0 then
+          M.warm()
+        end
+      end
+      local pairs_out = {}
+      --[[ The fork labels each implementation location with its locale. Pairing
+        by label survives keys that exist in only some locales; upstream servers
+        have no labels, so fall back to the project locale order. ]]
+      local labeled = #locations > 0
+      for _, location in ipairs(locations) do
+        if not (location.data and location.data.locale) then
+          labeled = false
+          break
+        end
+      end
+      if labeled then
+        for _, location in ipairs(locations) do
+          pairs_out[#pairs_out + 1] = { code = location.data.locale, location = location }
+        end
+      else
+        for i, code in ipairs(codes) do
+          if locations[i] then
+            pairs_out[#pairs_out + 1] = { code = code, location = locations[i] }
+          end
+        end
+      end
+      on_result(pairs_out, value)
+    end)
+  end)
+end
+
+--- The definition for a locale, falling back to the first locale.
+---@param pairs {code: string, location: table}[]
+---@param code string?
+---@return table? location
+function M.location_for(pairs, code)
+  code = code or M.display_locale()
+  for _, pair in ipairs(pairs) do
+    if pair.code == code then
+      return pair.location
+    end
+  end
+  return pairs[1] and pairs[1].location
 end
 
 --- Cycle the display locale to the next entry and refresh everything visible.

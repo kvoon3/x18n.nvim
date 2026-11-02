@@ -1,4 +1,5 @@
--- Locale cycling: next() flips en -> zh -> en and decorations follow the server.
+-- Locale cycling: the server reports locales as en, fr, ja, zh-CN; next()
+-- walks that order and wraps. The values are derived from the reported list.
 local ctx = ...
 local decorations = require 'x18n.decorations'
 
@@ -13,21 +14,35 @@ local function marks_text()
   return table.concat(out, '\n')
 end
 
-assert(marks_text():find('Hello x18n', 1, true), 'baseline should show the en value')
+local values = {
+  en = { 'Hello x18n', 'A playground for x18n.nvim' },
+  fr = { 'Bonjour x18n', 'Un terrain de jeu pour x18n.nvim' },
+  ja = { 'こんにちは x18n', 'x18n.nvim の実験場' },
+  ['zh-CN'] = { '你好 x18n', 'x18n.nvim 的试验场' },
+}
+local function rendered(code)
+  local text = marks_text()
+  return text:find(values[code][1], 1, true) and text:find(values[code][2], 1, true)
+end
 
-local next_locale = require('x18n.locales').next()
-assert(next_locale == 'zh', ('expected zh, got %s'):format(tostring(next_locale)))
+assert(rendered 'en', 'baseline should show both en values')
 
+local module = require 'x18n.locales'
+local list = module.locales()
+assert(#list == 4 and list[1] == 'en', 'locale list wrong: ' .. table.concat(list, ','))
+for i = 2, #list do
+  local got = module.next()
+  assert(got == list[i], ('expected %s, got %s'):format(list[i], tostring(got)))
+  assert(ctx.wait_for(function()
+    return rendered(list[i])
+  end, 5000), ('decorations did not switch to %s: %s'):format(list[i], marks_text()))
+end
+
+local wrapped = module.next()
+assert(wrapped == list[1], ('expected wrap to %s, got %s'):format(list[1], tostring(wrapped)))
 assert(ctx.wait_for(function()
-  return marks_text():find('你好 x18n', 1, true)
-end, 5000), 'decorations did not switch to zh: ' .. marks_text())
+  return rendered(list[1])
+end, 5000), 'decorations did not switch back to ' .. list[1])
 
-local back = require('x18n.locales').next()
-assert(back == 'en', ('expected en, got %s'):format(tostring(back)))
-assert(ctx.wait_for(function()
-  return marks_text():find('Hello x18n', 1, true)
-end, 5000), 'decorations did not switch back to en')
-
-local locales = require('x18n.locales').locales()
-assert(#locales == 2 and locales[1] == 'en' and locales[2] == 'zh', 'locale list wrong: ' .. table.concat(locales, ','))
+assert(#module.locales() == 4, 'locale list changed during the cycle')
 print('locales ok')
