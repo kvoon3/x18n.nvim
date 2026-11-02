@@ -17,7 +17,9 @@ assert(not got.err, got.err and got.err.message)
 assert(got.value:find('app%.title', 1, false), 'hover lost the key')
 assert(not got.value:find('command:', 1, true), 'command links not stripped')
 assert(got.value:find('1 usage', 1, true), 'usage count missing')
-assert(got.value:find('|', 1, true), 'table markdown stripped too aggressively')
+-- The fork's hover markdown is a bullet list; no pipe tables anywhere.
+assert(not got.value:find('|', 1, true), 'table pipes leaked: ' .. got.value)
+assert(got.value:find('%- .*en', 1, false), 'locale bullet missing')
 -- The fork's structured field rides along untouched.
 local struct = nil
 client:request('textDocument/hover', {
