@@ -13,13 +13,18 @@ local function cursor_onto(buf, pattern)
   return false
 end
 
--- A helper: the hover float never takes the cursor, so find it by buffer name.
+-- The native float records itself on the parent buffer.
 local function hover_buf()
-  for _, w in ipairs(vim.api.nvim_list_wins()) do
-    local b = vim.api.nvim_win_get_buf(w)
-    if vim.api.nvim_buf_get_name(b):find('x18n$') then
-      return b
-    end
+  local win = vim.b[ctx.buf].lsp_floating_preview
+  if win and vim.api.nvim_win_is_valid(win) then
+    return vim.api.nvim_win_get_buf(win)
+  end
+end
+
+local function close_hover()
+  local win = vim.b[ctx.buf].lsp_floating_preview
+  if win and vim.api.nvim_win_is_valid(win) then
+    vim.api.nvim_win_close(win, true)
   end
 end
 
@@ -35,7 +40,7 @@ assert(text:find('Hello x18n', 1, true) and text:find('你好 x18n', 1, true), '
 assert(not text:find('|', 1, true), 'raw markdown pipes leaked: ' .. text)
 assert(not text:find('%5B', 1, true), 'encoded command link leaked: ' .. text)
 assert(text:find('usage', 1, true), 'usage line missing')
--- The hover float stays open until the cursor moves in the parent window.
+-- The native float stays open until the cursor moves in the parent window.
 assert(hover_buf() ~= nil, 'hover float missing before the move')
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
@@ -54,12 +59,7 @@ assert(actions.show_translations() == true, 'UTF-16 position missed the key afte
 assert(ctx.wait_for(function()
   return hover_buf() ~= nil
 end, 5000), 'CJK popup never opened')
-local b = hover_buf()
-for _, w in ipairs(vim.api.nvim_list_wins()) do
-  if vim.api.nvim_win_get_buf(w) == b then
-    vim.api.nvim_win_close(w, true)
-  end
-end
+close_hover()
 
 actions.explain()
 assert(ctx.wait_for(function()

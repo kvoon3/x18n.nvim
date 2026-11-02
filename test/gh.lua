@@ -14,12 +14,16 @@ end, 5000), 'gh not bound on x18n buffers')
 vim.api.nvim_win_set_cursor(0, { 11, 30 })
 local maps = vim.fn.maparg('gh', 'n', false, true)
 maps.callback()
+local function close_hover()
+  local win = vim.b[ctx.buf].lsp_floating_preview
+  if win and vim.api.nvim_win_is_valid(win) then
+    vim.api.nvim_win_close(win, true)
+  end
+end
 local function hover_buf()
-  for _, w in ipairs(vim.api.nvim_list_wins()) do
-    local b = vim.api.nvim_win_get_buf(w)
-    if vim.api.nvim_buf_get_name(b):find('x18n$') then
-      return b
-    end
+  local win = vim.b[ctx.buf].lsp_floating_preview
+  if win and vim.api.nvim_win_is_valid(win) then
+    return vim.api.nvim_win_get_buf(win)
   end
 end
 assert(ctx.wait_for(function()
@@ -27,12 +31,7 @@ assert(ctx.wait_for(function()
 end, 5000), 'popup never opened from gh')
 local first = vim.api.nvim_buf_get_lines(hover_buf(), 0, 1, false)[1]
 assert(first:find('app%.title', 1, false), 'popup missing key: ' .. first)
-local hb = hover_buf()
-for _, w in ipairs(vim.api.nvim_list_wins()) do
-  if vim.api.nvim_win_get_buf(w) == hb then
-    vim.api.nvim_win_close(w, true)
-  end
-end
+close_hover()
 
 -- Off a key: falls back to the hover that was there before (here: the default
 -- vim.lsp.buf.hover captured at bind time).
@@ -63,23 +62,10 @@ assert(maps.desc and maps.desc:find('x18n', 1, true), 're-chain did not reclaim 
 -- On a key again after the clobber: popup, not hover.
 vim.api.nvim_win_set_cursor(0, { 11, 30 })
 maps.callback()
-local function hover_buf2()
-  for _, w in ipairs(vim.api.nvim_list_wins()) do
-    local b = vim.api.nvim_win_get_buf(w)
-    if vim.api.nvim_buf_get_name(b):find('x18n$') then
-      return b
-    end
-  end
-end
 assert(ctx.wait_for(function()
-  return hover_buf2() ~= nil
+  return hover_buf() ~= nil
 end, 5000), 'popup did not survive the clobber')
-local hb2 = hover_buf2()
-for _, w in ipairs(vim.api.nvim_list_wins()) do
-  if vim.api.nvim_win_get_buf(w) == hb2 then
-    vim.api.nvim_win_close(w, true)
-  end
-end
+close_hover()
 
 -- Off a key after the clobber: exactly one hover call, no chain stacking.
 vim.api.nvim_win_set_cursor(0, { 1, 0 })

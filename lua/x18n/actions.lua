@@ -120,7 +120,15 @@ function M.show_translations()
       if lines and #lines > 0 then
         shown = true
         vim.schedule(function()
-          util.preview('x18n', lines, { hover = true })
+          --[[ The native preview machinery: anchored at the cursor, closes on
+            cursor movement, `q` dismisses, and a second invocation focuses the
+            open float instead of stacking another. ]]
+          vim.lsp.util.open_floating_preview(lines, nil, {
+            border = 'rounded',
+            title = ' x18n ',
+            title_pos = 'center',
+            focus_id = 'x18n/translations',
+          })
         end)
       end
     end
