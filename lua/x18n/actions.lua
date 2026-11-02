@@ -122,11 +122,9 @@ function M.show_translations()
         vim.schedule(function()
           --[[ The native preview machinery: anchored at the cursor, closes on
             cursor movement, `q` dismisses, and a second invocation focuses the
-            open float instead of stacking another. ]]
+            open float instead of stacking another. No border or title here:
+            float styling belongs to the user's config. ]]
           vim.lsp.util.open_floating_preview(lines, nil, {
-            border = 'rounded',
-            title = ' x18n ',
-            title_pos = 'center',
             focus_id = 'x18n/translations',
           })
         end)
@@ -153,7 +151,10 @@ function M.explain()
       return init.notify(err.message, vim.log.levels.WARN)
     end
     vim.schedule(function()
-      util.preview('x18n explain', vim.split(result or 'nothing to explain', '\n'))
+      vim.lsp.util.open_floating_preview(vim.split(result or 'nothing to explain', '\n'), nil, {
+        focus_id = 'x18n/explain',
+        close_events = {},
+      })
     end)
   end)
 end

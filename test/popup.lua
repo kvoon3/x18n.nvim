@@ -61,15 +61,27 @@ assert(ctx.wait_for(function()
 end, 5000), 'CJK popup never opened')
 close_hover()
 
+-- explain and status ride the native float with close_events = {} (stay open)
+local function float_with(content_pattern)
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    local cfg = vim.api.nvim_win_get_config(w)
+    if cfg.relative ~= '' then
+      local text = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(w), 0, -1, false), '\n')
+      if text:find(content_pattern) then
+        return w
+      end
+    end
+  end
+end
+
 actions.explain()
 assert(ctx.wait_for(function()
-  return vim.api.nvim_buf_get_name(0):find('x18n explain') ~= nil
+  return float_with('presets:') ~= nil or float_with('finders:') ~= nil
 end, 5000), 'explain float never opened')
-local explained = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_get_current_buf(), 0, -1, false), '\n')
-assert(#explained > 0, 'explain float empty')
+vim.api.nvim_win_close(float_with('presets:') or float_with('finders:'), true)
 
--- A second float in the same session must not trip over the first buffer's name.
-vim.cmd 'close'
 require('x18n.status').show()
-assert(vim.api.nvim_buf_get_name(0):find('x18n status') ~= nil, 'second float failed to open')
+assert(ctx.wait_for(function()
+  return float_with('display locale') ~= nil
+end, 5000), 'status float failed to open')
 print('popup/explain ok')

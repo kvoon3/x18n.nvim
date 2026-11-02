@@ -1,7 +1,5 @@
 local M = {}
 
-local util = require 'x18n.util'
-
 --- Progress per locale as "en 3/3" style short lines.
 ---@param project table ProjectInfo
 ---@param progress table? ProgressResult
@@ -61,7 +59,12 @@ function M.show()
     end
     lines[#lines + 1] = '  display locale ' .. project.displayLocale
   end
-  util.preview('x18n status', lines)
+  --[[ The native float without close events: status stays until dismissed,
+    and the border comes from the user's config, not from here. ]]
+  vim.lsp.util.open_floating_preview(lines, nil, {
+    focus_id = 'x18n/status',
+    close_events = {},
+  })
 end
 
 return M
