@@ -1,6 +1,6 @@
--- The hover markdown: the fork's hoverCommands=false (set by the plugin's
--- init_options) omits the VS Code command links server-side, and the client
--- handler strips any that still arrive (upstream servers).
+-- The hover markdown: the server omits VS Code command links unless the client
+-- lists them in init_options.hoverCommands (this plugin lists none), and the
+-- client handler strips any that still arrive (upstream servers).
 local ctx = ...
 local client = vim.lsp.get_clients({ name = 'x18n' })[1]
 assert(client, 'no client')

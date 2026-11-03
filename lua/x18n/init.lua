@@ -28,7 +28,7 @@ local defaults = {
       'Gemfile',
       '.git',
     },
-    init_options = { showFlags = true, hoverCommands = false },
+    init_options = { showFlags = true },
   },
   decorations = {
     enabled = true,

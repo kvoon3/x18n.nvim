@@ -11,7 +11,11 @@ local M = {}
 ---@param v table HoverValue from the server
 ---@return string[] lines
 function M.from_value(v)
-  local out = { ('x18n %s'):format(v.key) }
+  local title = ('x18n %s'):format(v.key)
+  if v.label and v.label ~= '' then
+    title = title .. ' ' .. v.label
+  end
+  local out = { title }
   if #v.locales > 0 then
     out[#out + 1] = ''
     local rows = {}
@@ -23,9 +27,13 @@ function M.from_value(v)
       if l.outdated then
         suffix = suffix .. ' · outdated'
       end
+      local value = l.value == nil and '_missing_' or (l.value == '' and '_empty_' or l.value)
+      if l.state and l.state ~= '' then
+        value = value .. ' (' .. l.state:gsub('%-', ' ') .. ')'
+      end
       rows[#rows + 1] = {
         ('%s %s%s'):format(l.flag or '', l.code, suffix),
-        l.value == nil and '_missing_' or (l.value == '' and '_empty_' or l.value),
+        value,
       }
     end
     local w = { 1, 2 }
