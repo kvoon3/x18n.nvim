@@ -2,4 +2,4 @@ tags
 *.luac
 .DS_Store
 .audit/
-playground/node_modules/
+node_modules/

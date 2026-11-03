@@ -40,7 +40,9 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 }
 ```
 
-The LSP client is configured and enabled automatically. Call `setup` with `lsp = false` to manage `vim.lsp.config('x18n', ...)` yourself (e.g. when [nvim-lspconfig](https://github.com/folke/nvim-lspconfig) ships its own definition), and with `decorations = false` to disable the inline annotations.
+The LSP client is configured and enabled automatically. Call `setup` with `lsp = false` to manage `vim.lsp.config('x18n', ...)` yourself (e.g. when [nvim-lspconfig](https://github.com/folke/nvim-lspconfig) ships its own definition), and with `decorations = false` to disable the inline annotations. The client attaches to JavaScript/TypeScript, Vue, Svelte, HTML, PHP/Blade, ERB/Ruby, JSON and YAML buffers; the server decides whether the project has locale resources.
+
+The default `root_markers` include `package.json` and `.git`, so the client starts in ordinary JS projects and the server auto-detects the stack, the same detection the CLI and VS Code use. Narrowing `root_markers` to `x18n.config.*` starts the client only in explicitly configured projects, at the cost of skipping the auto-detected ones. The server stays resident in a root where it finds no locale files; stop it with `:X18nDisable`.
 
 Decorations take a `mode`. `'conceal'` (default) replaces the key literal with the value, so `t('app.title')` reads `t(Hello x18n)`, and the cursor's line falls back to the raw key with the value as an end-of-line arrow, redrawn as the cursor moves. `'inline'` puts the value right after the call, `'eol'` at the end of the line. i18n.nvim's names work too: `'both'`, `'translation'`, `'translation_conceal'` and `'origin'`. In conceal modes `conceallevel` is raised to 2 in the windows it decorates and restored on mode change or `:X18nToggleDecorations`. Missing keys always yield to the server's diagnostic instead of doubling it.
 
@@ -181,11 +183,20 @@ Locale flags come from the server. Set `lsp.init_options.showFlags = false` to s
 
 Set `vim.g.x18n_debug = true` to log protocol requests and responses. Run `:X18nExplain` when the server finds nothing, and see `:checkhealth x18n` for a status overview.
 
-The repository carries a headless test suite against the real server. Each test copies `test/fixture` to a temp directory and runs there, so `playground/` stays a live sandbox and its edits do not affect the suite. The harness uses the fork binary linked by `playground/package.json` (`file:../../../f/x18n`). Build that fork (`pnpm --filter @x18n/lsp build`) before running the suite, so structured hover, completion documentation and usage badges are exercised:
+The repository ships the upstream [x18n playground](https://github.com/x18n-dev/x18n/tree/main/playground) under `playground/` at upstream commit `abe9140`: eight stacks (Vue, React, Next, Laravel, Rails, Angular, a monorepo and an i18n-ally migration), each with deliberate missing keys, unused keys, placeholder mismatches and hard-coded strings. Refresh the copy with `scripts/sync-playground.sh`. The CLI and server are dev dependencies at the repo root:
+
+```sh
+npm install
+node_modules/.bin/x18n check --root playground/vue-vite
+```
+
+The headless test suite runs against the real server. Each test copies `test/fixture` to a temp directory and runs there, so `playground/` keeps whatever state the examples have. The harness uses the fork binary linked by the root `package.json` (`file:../../f/x18n`). Build that fork (`pnpm --filter @x18n/lsp build`) before running the suite, so structured hover, completion documentation and usage badges are exercised:
 
 ```sh
 for t in test/*.lua; do [ "$t" = test/harness.lua ] || nvim -l test/harness.lua "$t"; done
 ```
+
+The playground's rendering has its own project-local verification skill: [`.claude/skills/verify-x18n-nvim/SKILL.md`](.claude/skills/verify-x18n-nvim/SKILL.md). It boots headless nvim against each vendored example, switches every locale, reads the actual screen cells, and compares them with the server's decorations and the CLI's read of the locale files. The feature map under `features/` is the maintained source for those journeys.
 
 ## Roadmap
 

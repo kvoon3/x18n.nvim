@@ -4,15 +4,14 @@
 -- Usage: nvim -l test/harness.lua <script.lua>
 
 local plugin_root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':h:h'):gsub('/playground$', '')
-local playground = plugin_root .. '/playground'
 local script = assert(arg[1], 'usage: nvim -l test/harness.lua <script.lua>')
 -- The opt-out test declares its setup variant in its filename.
 local decorations_disabled = script:find('decorations_disabled', 1, true) ~= nil
 
---[[ The playground is the user's live sandbox; tests must not depend on its
-  current edits. Copy the pristine fixture to a temp dir and point the server at
-  that copy. The fixture needs no node_modules: the server aliases @x18n/core
-  and the presets to its own installation when it loads the config. ]]
+--[[ Tests never touch the vendored upstream playground: copy the pristine
+  fixture to a temp dir and point the server at that copy. The fixture needs no
+  node_modules: the server aliases @x18n/core and the presets to its own
+  installation when it loads the config. ]]
 local fixture = plugin_root .. '/test/fixture'
 --[[ Outside nvim's tempname root: vim.fn.tempname() is reaped by nvim on exit
   while the server may still be shutting down, and diagnostics/cache writes go
@@ -33,12 +32,13 @@ vim.api.nvim_create_autocmd('VimLeavePre', {
 })
 
 vim.opt.runtimepath:prepend(plugin_root)
--- Pin the server to the fork binary linked by the playground, so tests
--- exercise the exact server the protocol analysis was written against rather
--- than whatever is on PATH. Build the fork's dist before running the suite.
+-- Pin the server to the fork binary linked at the repo root, so tests exercise
+-- the exact server the protocol analysis was written against rather than
+-- whatever is on PATH. Run `npm install` and build the fork's dist before the
+-- suite.
 local opts = {
   lsp = {
-    cmd = { 'node', playground .. '/node_modules/.bin/x18n-lsp', '--stdio' },
+    cmd = { 'node', plugin_root .. '/node_modules/.bin/x18n-lsp', '--stdio' },
   },
 }
 if decorations_disabled then

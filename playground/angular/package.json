@@ -1,0 +1,8 @@
+{
+  "name": "playground-angular",
+  "private": true,
+  "dependencies": {
+    "@angular/core": "^22.2.3",
+    "@ngx-translate/core": "^18.0.0"
+  }
+}

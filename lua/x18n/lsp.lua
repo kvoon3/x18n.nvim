@@ -3,6 +3,56 @@ local M = {}
 -- The resolved config, kept for manual start after :X18nEnable/:X18nReload.
 M.config = nil
 
+--- Build a root_dir function from marker names. An x18n config anywhere upward
+--- wins first (a monorepo config must not lose to a nested package.json), then
+--- the nearest ancestor containing any marker wins. Native vim.fs.root applies
+--- markers in list order, so a repo-root package.json can shadow a closer
+--- composer.json or Gemfile.
+---@param markers (string|fun(bufnr: integer):boolean)[]
+---@return fun(bufnr: integer, on_dir: fun(dir?: string))
+function M.root_dir_for(markers)
+  local names, configs, has_function = {}, {}, false
+  for _, marker in ipairs(markers) do
+    if type(marker) == 'string' then
+      names[#names + 1] = marker
+      if marker:match '^x18n%.config%.' then
+        configs[#configs + 1] = marker
+      end
+    else
+      has_function = true
+    end
+  end
+  return function(bufnr, on_dir)
+    local path = vim.api.nvim_buf_get_name(bufnr)
+    if path == '' or path:match '^%w+://' then
+      return
+    end
+    if #configs > 0 then
+      local found =
+        vim.fs.find(configs, { upward = true, path = vim.fs.dirname(path), type = 'file' })[1]
+      if found then
+        return on_dir(vim.fs.dirname(found))
+      end
+    end
+    if has_function then
+      --[[ A marker predicate cannot be stat'ed here; let Neovim resolve the
+        whole list. ]]
+      local root = vim.fs.root(bufnr, markers)
+      if root then
+        return on_dir(root)
+      end
+      return
+    end
+    for dir in vim.fs.parents(path) do
+      for _, marker in ipairs(names) do
+        if vim.uv.fs_stat(dir .. '/' .. marker) then
+          return on_dir(dir)
+        end
+      end
+    end
+  end
+end
+
 --- Register the x18n language server with the native LSP stack.
 ---@param opts vim.lsp.Config User overrides merged on top of the plugin defaults.
 ---@param on_changed function Called on the server's x18n/changed notification.
@@ -10,6 +60,13 @@ function M.setup(opts, on_changed)
   opts = vim.deepcopy(opts)
   opts.name = 'x18n'
   opts.handlers = opts.handlers or {}
+
+  --[[ Resolve the configured markers ourselves (see root_dir_for): native
+    vim.fs.root treats the marker list in order, so an ancestor package.json
+    wins over a closer composer.json or Gemfile. ]]
+  if not opts.root_dir and type(opts.root_markers) == 'table' then
+    opts.root_dir = M.root_dir_for(opts.root_markers)
+  end
 
   --[[ The server's hover markdown ends in VS Code `command:` links, URL-encoded
     JSON args that wrap across half a float in Neovim. Editors that render the
@@ -95,7 +152,17 @@ function M.start(bufnr)
     return nil
   end
   bufnr = bufnr or vim.api.nvim_get_current_buf()
-  local root = M.config.root_dir or vim.fs.root(bufnr, M.config.root_markers or {})
+  local root = M.config.root_dir
+  if type(root) == 'function' then
+    local done, resolved = false, nil
+    root(bufnr, function(dir)
+      resolved = dir
+      done = true
+    end)
+    vim.wait(100, function() return done end, 10)
+    root = resolved
+  end
+  root = root or vim.fs.root(bufnr, M.config.root_markers or {})
   if not root then
     return nil
   end

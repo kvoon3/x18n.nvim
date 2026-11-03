@@ -406,7 +406,10 @@ local function render(bufnr, result)
         })
       end
     else
-      local line, col = util.to_byte(bufnr, d.expression['end'])
+      --[[ Some usages (directives, template pipes) have no enclosing call, so
+        the server sends only the key range. Put the marker after that. ]]
+      local expression = d.expression or d.range
+      local line, col = util.to_byte(bufnr, expression['end'])
       --[[ translation_conceal leaves the cursor line raw only. ]]
       local on_cursor = p.cursor_dependent and line == cur
       if not (on_cursor and p.cursor == 'none') then

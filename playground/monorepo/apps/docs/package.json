@@ -1,0 +1,7 @@
+{
+  "name": "docs",
+  "private": true,
+  "dependencies": {
+    "i18next": "^26.5.3"
+  }
+}

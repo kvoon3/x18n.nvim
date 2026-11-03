@@ -37,6 +37,11 @@ local main = ctx.playground .. '/src/main.js'
 -- Display locale en, but pick fr from the list.
 vim.cmd('edit ' .. main)
 vim.cmd 'filetype detect'
+--[[ A root_dir function resolves after the buffer reload; wait for the client
+  to re-attach instead of racing the scheduled start. ]]
+assert(ctx.wait_for(function()
+  return #vim.lsp.get_clients({ bufnr = 0, name = 'x18n' }) > 0
+end, 5000), 'no x18n client after re-editing main.js')
 assert(cursor_onto('app%.title'), 'lost app.title call')
 assert(actions.definition() == true, 'definition returned false on a key')
 local list = qf()
