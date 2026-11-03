@@ -1,10 +1,10 @@
 local M = {}
 
--- Render the x18n hover into aligned plain text. The fork at kvoon3/x18n
--- (feat/structured-hover) attaches an `x18n` field to the hover response with
--- the data pre-chewed; upstream servers only ship the markdown, which this
--- module also parses as a fallback. The markdown shapes are fixed by the
--- server, so the parsing stays deliberately narrow.
+-- Render the x18n hover into aligned plain text. The kvoon3/x18n fork attaches
+-- an `x18n` field to the hover response with the data pre-chewed; upstream
+-- servers only ship the markdown, which this module also parses as a fallback.
+-- The markdown shapes are fixed by the server, so the parsing stays
+-- deliberately narrow.
 
 --- Render the structured `x18n` hover value as aligned plain text. No markup:
 --- the bundled markdown query conceals nothing, so markers would show raw.
