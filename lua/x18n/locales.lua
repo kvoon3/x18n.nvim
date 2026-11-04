@@ -95,65 +95,48 @@ function M.set_display(locale)
   M.warm()
 end
 
---- The structured hover value at a position, when the server provides it.
+--- The key details at a position, when the server provides them.
 ---@param client vim.lsp.Client
 ---@param uri string
 ---@param position table LSP position, already in UTF-16 columns
----@param on_result fun(value: table?)
-function M.hover_value(client, uri, position, on_result)
-  client:request('textDocument/hover', {
-    textDocument = { uri = uri },
+---@param on_result fun(info: table?)
+function M.key_info(client, uri, position, on_result)
+  client:request('x18n/keyInfo', {
+    uri = uri,
     position = position,
   }, function(err, result)
-    on_result(not err and result and result.x18n and result.x18n.value or nil)
+    on_result(not err and result or nil)
   end)
 end
 
 --- Every locale definition of the key at a position, paired with its code.
---- The server sorts implementation locations by project locale order; hover
---- says which locales actually own a value.
----@param on_result fun(pairs: {code: string, location: table}[], value: table?)
+--- The server sorts implementation locations by project locale order; keyInfo
+--- says which locales actually define the key.
+---@param on_result fun(pairs: {code: string?, location: table}[], info: table?)
 function M.key_locations(client, uri, position, on_result)
-  M.hover_value(client, uri, position, function(value)
+  M.key_info(client, uri, position, function(value)
     client:request('textDocument/implementation', {
       textDocument = { uri = uri },
       position = position,
     }, function(err, locations)
       locations = not err and locations or {}
-      local codes = {}
+      local codes
       if value and value.locales then
+        codes = {}
         for _, locale in ipairs(value.locales) do
-          if locale.value ~= nil then
+          if locale.present then
             codes[#codes + 1] = locale.code
           end
         end
-      else
-        codes = M.cached()
-        if #codes == 0 then
-          M.warm()
+        --[[ A server that reports a different count cannot be paired by index.
+          Leave the codes out rather than label a definition with the wrong one. ]]
+        if #codes ~= #locations then
+          codes = nil
         end
       end
       local pairs_out = {}
-      --[[ The fork labels each implementation location with its locale. Pairing
-        by label survives keys that exist in only some locales; upstream servers
-        have no labels, so fall back to the project locale order. ]]
-      local labeled = #locations > 0
-      for _, location in ipairs(locations) do
-        if not (location.data and location.data.locale) then
-          labeled = false
-          break
-        end
-      end
-      if labeled then
-        for _, location in ipairs(locations) do
-          pairs_out[#pairs_out + 1] = { code = location.data.locale, location = location }
-        end
-      else
-        for i, code in ipairs(codes) do
-          if locations[i] then
-            pairs_out[#pairs_out + 1] = { code = code, location = locations[i] }
-          end
-        end
+      for i, location in ipairs(locations) do
+        pairs_out[#pairs_out + 1] = { code = codes and codes[i] or nil, location = location }
       end
       on_result(pairs_out, value)
     end)

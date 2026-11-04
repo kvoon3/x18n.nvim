@@ -28,16 +28,16 @@ local function list(client, on_result)
   end)
 end
 
---- The structured hover for a key, when the server provides it.
-local function hover_value(client, entry, on_result)
+--- The key details for a key, when the server provides them.
+local function key_info(client, entry, on_result)
   if not entry.location then
     return on_result(nil)
   end
-  locales.hover_value(client, entry.location.uri, entry.location.range.start, on_result)
+  locales.key_info(client, entry.location.uri, entry.location.range.start, on_result)
 end
 
 --- Every locale definition of the key, paired with its locale code.
----@param on_result fun(pairs: {code: string, location: table}[], hover: table?)
+---@param on_result fun(pairs: {code: string?, location: table}[], info: table?)
 local function locale_locations(client, entry, on_result)
   if not entry.location then
     return on_result({}, nil)
@@ -86,22 +86,27 @@ local actions = {
   end,
   --- Copy the display-locale translation.
   copy_translation = function(entry, client)
-    hover_value(client, entry, function(value)
+    key_info(client, entry, function(info)
+      if not info then
+        return notify('copy_translation needs the x18n fork server', vim.log.levels.WARN)
+      end
       local display = locales.display_locale()
+      if not display then
+        for _, locale in ipairs(info.locales or {}) do
+          if locale.source then
+            display = locale.code
+            break
+          end
+        end
+      end
       local chosen
-      for _, locale in ipairs(value and value.locales or {}) do
+      for _, locale in ipairs(info.locales or {}) do
         if locale.code == display then
           chosen = locale
           break
         end
       end
       local text = chosen and chosen.value
-      --[[ Upstream servers ship no structured hover; the symbol's source value
-        is the only translation available there. A known display locale with a
-        missing value is a real miss and must not silently copy the source. ]]
-      if text == nil and (value == nil or display == nil) then
-        text = entry.value
-      end
       if text == nil or text == '' then
         return notify(('no %s translation for %s'):format(display or 'source', entry.key), vim.log.levels.WARN)
       end
@@ -115,19 +120,36 @@ local actions = {
         return notify('no locale definitions for ' .. entry.key, vim.log.levels.WARN)
       end
       local by_code = {}
+      local has_codes = false
       for _, pair in ipairs(pairs) do
-        by_code[pair.code] = pair.location
-      end
-      local items = {}
-      local codes = locales.cached()
-      if #codes == 0 then
-        locales.warm()
-        for _, pair in ipairs(pairs) do
-          codes[#codes + 1] = pair.code
+        if pair.code then
+          has_codes = true
+          by_code[pair.code] = pair.location
         end
       end
-      for _, code in ipairs(codes) do
-        items[#items + 1] = { code = code, location = by_code[code] }
+      local items = {}
+      if has_codes then
+        local codes = locales.cached()
+        if #codes == 0 then
+          locales.warm()
+          for _, pair in ipairs(pairs) do
+            if pair.code then
+              codes[#codes + 1] = pair.code
+            end
+          end
+        end
+        for _, code in ipairs(codes) do
+          items[#items + 1] = { code = code, location = by_code[code] }
+        end
+      else
+        --[[ The server has no locale labels. Offer the definition files by name
+          instead of guessing which locale each one holds. ]]
+        for _, pair in ipairs(pairs) do
+          items[#items + 1] = {
+            code = vim.fn.fnamemodify(vim.uri_to_fname(pair.location.uri), ':t'),
+            location = pair.location,
+          }
+        end
       end
       vim.ui.select(items, {
         prompt = 'x18n key locale',

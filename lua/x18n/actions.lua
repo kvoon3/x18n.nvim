@@ -70,17 +70,14 @@ function M.definition()
   end
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   local locales = require 'x18n.locales'
-  --[[ Warm the project cache before the fallback pairing and the markers. An
-    upstream server has no structured hover, so key_locations falls back to the
-    cached locale names; a cold cache would otherwise drop every definition. ]]
   local projects = locales.projects()
-  local done, definitions, hover = false, nil, nil
+  local done, definitions, info = false, nil, nil
   locales.key_locations(client, vim.uri_from_bufnr(bufnr), {
     line = row - 1,
     character = util.to_utf16(bufnr, row - 1, col),
   }, function(result, value)
     definitions = result
-    hover = value
+    info = value
     done = true
   end)
   vim.wait(2000, function()
@@ -92,13 +89,12 @@ function M.definition()
   if #definitions == 1 then
     return util.jump(definitions[1].location)
   end
-  --[[ The key's own project carries the source and display markers. The
-    structured hover names it; an upstream server without that field falls
-    back to the first project. ]]
+  --[[ The key's own project carries the source and display markers. When the
+    server has no keyInfo, use the first project. ]]
   local project
-  if hover and hover.project then
+  if info and info.project then
     for _, candidate in ipairs(projects or {}) do
-      if candidate.name == hover.project then
+      if candidate.name == info.project then
         project = candidate
         break
       end
@@ -118,20 +114,22 @@ function M.definition()
     vim.fn.bufload(file)
     local line_row, line_col = util.to_byte(file, location.range.start)
     local line = vim.api.nvim_buf_get_lines(file, line_row, line_row + 1, false)[1] or ''
+    local code = definition.code
     local markers = {}
-    if definition.code == source then
+    if code and code == source then
       markers[#markers + 1] = 'source'
     end
-    if definition.code == display then
+    if code and code == display then
       markers[#markers + 1] = 'display'
     end
     local suffix = #markers > 0 and (' (' .. table.concat(markers, ', ') .. ')') or ''
+    local label = code or vim.fn.fnamemodify(path, ':t')
     items[#items + 1] = {
       filename = path,
       lnum = line_row + 1,
       col = line_col + 1,
-      text = ('[%s%s] %s'):format(definition.code, suffix, line),
-      user_data = { locale = definition.code },
+      text = ('[%s%s] %s'):format(label, suffix, line),
+      user_data = { locale = code },
     }
   end
   vim.fn.setqflist({}, ' ', {
@@ -169,20 +167,20 @@ function M.code_action()
     return false
   end
   local locales = require 'x18n.locales'
-  local hover_done, hover = false, nil
-  locales.hover_value(client, uri, position, function(value)
-    hover = value
-    hover_done = true
+  local info_done, info = false, nil
+  locales.key_info(client, uri, position, function(value)
+    info = value
+    info_done = true
   end)
   vim.wait(2000, function()
-    return hover_done
+    return info_done
   end, 25)
-  if not hover or not hover.locales then
+  if not info or not info.locales then
     return false
   end
   local choices = {}
-  for _, locale in ipairs(hover.locales) do
-    if locale.value == nil then
+  for _, locale in ipairs(info.locales) do
+    if not locale.present then
       choices[#choices + 1] = {
         code = locale.code,
         title = ('Add "%s" to %s'):format(key_at.key, locale.code),
@@ -260,9 +258,9 @@ local function set_copy_keymap(bufnr, key)
   end
 end
 
---- Popup with the key's value in every locale, from the server's hover data.
---- Returns false when the cursor is not on a key, so a keymap can fall back
---- (e.g. to signature help). Synchronous: the hover round trip is the wait.
+--- Popup with the key's value in every locale. Returns false when the cursor
+--- is not on a key, so a keymap can fall back (e.g. to native hover).
+--- Synchronous: the keyInfo round trip is the wait.
 ---@return boolean shown
 function M.show_translations()
   local init = require 'x18n'
@@ -273,24 +271,18 @@ function M.show_translations()
   local bufnr = vim.api.nvim_get_current_buf()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   local done, shown, cancelled = false, false, false
-  client:request('textDocument/hover', {
-    textDocument = { uri = vim.uri_from_bufnr(bufnr) },
-    position = { line = row - 1, character = util.to_utf16(bufnr, row - 1, col) },
-  }, function(err, result)
+  require('x18n.locales').key_info(client, vim.uri_from_bufnr(bufnr), {
+    line = row - 1,
+    character = util.to_utf16(bufnr, row - 1, col),
+  }, function(info)
     if cancelled then
       --[[ The wait below already returned false; opening now would fire both the
       caller's fallback and the popup. ]]
       return
     end
-    if not err and result and result.contents then
-      --[[ The fork's hover carries the data structured in result.x18n; upstream
-        answers only markdown, which x18n/hover also knows how to reformat. ]]
-      local hover = require 'x18n.hover'
-      local key = result.x18n and result.x18n.value and result.x18n.value.key
-      local lines = result.x18n and result.x18n.value and hover.from_value(result.x18n.value)
-        or hover.format(vim.lsp.util.convert_input_to_markdown_lines(result.contents))
-      key = key or (lines and lines[1] and lines[1]:match '^x18n%s+(.+)$')
-      if lines and #lines > 0 then
+    if info then
+      local lines = require('x18n.key_info').render(info)
+      if #lines > 0 then
         shown = true
         vim.schedule(function()
           --[[ The native preview machinery: anchored at the cursor, closes on
@@ -300,8 +292,8 @@ function M.show_translations()
           local fbuf = vim.lsp.util.open_floating_preview(lines, nil, {
             focus_id = 'x18n/translations',
           })
-          if fbuf and key then
-            set_copy_keymap(fbuf, key)
+          if fbuf then
+            set_copy_keymap(fbuf, info.key)
           end
         end)
       end

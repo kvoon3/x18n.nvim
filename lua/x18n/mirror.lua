@@ -102,9 +102,6 @@ function M.observe(client_id, uri, diagnostics)
   for _, d in ipairs(diagnostics or {}) do
     if d.code == 'missing-translation' then
       local key = d.data and d.data.key
-      if not key and type(d.message) == 'string' then
-        key = d.message:match '^"(.-)" is missing in '
-      end
       if key then
         keys[key] = d.message
       end

@@ -67,21 +67,6 @@ function M.setup(opts, on_changed)
     opts.root_dir = M.root_dir_for(opts.root_markers)
   end
 
-  --[[ The server's hover markdown ends in VS Code `command:` links, URL-encoded
-    JSON args that wrap across half a float in Neovim. Editors that render the
-    markdown (hover, eagle mouse window) get them stripped to their link text;
-    the structured x18n field and the raw table stay untouched. ]]
-  local user_hover = opts.handlers['textDocument/hover']
-  opts.handlers['textDocument/hover'] = function(err, result, ctx, config)
-    if result and result.contents and result.contents.kind == 'markdown' then
-      result.contents.value = result.contents.value:gsub('%[([^%]]*)%]%((command:[^)]*)%)', '%1')
-    end
-    if user_hover then
-      return user_hover(err, result, ctx, config)
-    end
-    return vim.lsp.handlers['textDocument/hover'](err, result, ctx, config)
-  end
-
   --[[ Diagnostics are pushed by the server. When the plugin option is false,
     empty every publish and reset what is already on screen. The raw payload
     also feeds the mirror that puts target-locale warnings on code usages. ]]
