@@ -447,17 +447,17 @@ local function render_locale_file(bufnr, result)
   restore_conceallevel_for(bufnr)
   for _, k in ipairs(result and result.keys or {}) do
     local segments = {}
-    if locale_eol_usage and k.usages ~= nil then
-      segments[#segments + 1] = usage_label(k.usages)
-    end
     if locale_eol_translation then
       segments[#segments + 1] = k.value or 'missing'
+    end
+    if locale_eol_usage and k.usages ~= nil then
+      segments[#segments + 1] = usage_label(k.usages)
     end
     if #segments > 0 then
       local line = util.to_byte(bufnr, k.range.start)
       local state = (locale_eol_translation and k.value == nil) and 'missing' or 'ok'
       vim.api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
-        virt_text = { { ' = ' .. table.concat(segments, ' · '), hl_for(state) } },
+        virt_text = { { ' ' .. table.concat(segments, ' · '), hl_for(state) } },
         virt_text_pos = 'eol',
         hl_mode = 'combine',
       })
