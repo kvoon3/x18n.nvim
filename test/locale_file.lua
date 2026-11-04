@@ -1,18 +1,9 @@
 -- Locale files: EOL virtual text shows the usage count by default. The
--- display-locale value is opt-in.
+-- display-locale value is opt-in when counts are available, and the automatic
+-- fallback when the server cannot report counts (the published server).
 local ctx = ...
 local decorations = require 'x18n.decorations'
 local ns = decorations.namespace()
-
-if ctx.upstream then
-  -- The published server has no usage counts, so show the value in this lane.
-  decorations.setup {
-    mode = 'conceal',
-    debounce_ms = 100,
-    show_locale_file_eol_translation = true,
-    show_locale_file_eol_usage = true,
-  }
-end
 
 vim.cmd('edit ' .. ctx.playground .. '/locales/ja.json')
 vim.cmd 'filetype detect'
@@ -44,11 +35,11 @@ for _, m in ipairs(marks) do
 end
 local joined = table.concat(texts, '\n')
 if ctx.upstream then
-  -- With the value opt-in above, the published server shows the value.
+  -- Auto mode falls back to the value when the server has no usage counts.
   assert(joined:find('Hello x18n', 1, true), 'expected en value at EOL: ' .. joined)
   assert(not joined:find('usage', 1, true), 'upstream EOL text claims a usage badge: ' .. joined)
 else
-  -- The default is the usage count; the value is already in the locale file.
+  -- With counts available, auto shows the usage badge and not the value.
   assert(joined:find('1 usage', 1, true), 'expected usage badges at EOL: ' .. joined)
   assert(not joined:find('Hello x18n', 1, true), 'default EOL annotation should not repeat the value: ' .. joined)
 end
@@ -62,7 +53,12 @@ local function eol_text()
 end
 
 if not ctx.upstream then
-  decorations.setup { mode = 'conceal', debounce_ms = 100, show_locale_file_eol_usage = true }
+  decorations.setup {
+    mode = 'conceal',
+    debounce_ms = 100,
+    show_locale_file_eol_translation = true,
+    show_locale_file_eol_usage = true,
+  }
   decorations.refresh_attached()
   assert(
     ctx.wait_for(function()
@@ -123,7 +119,12 @@ assert(
 )
 
 -- Usage badges are a separate switch.
-decorations.setup { mode = 'conceal', debounce_ms = 100, show_locale_file_eol_usage = false }
+decorations.setup {
+  mode = 'conceal',
+  debounce_ms = 100,
+  show_locale_file_eol_translation = true,
+  show_locale_file_eol_usage = false,
+}
 decorations.refresh_attached()
 assert(
   ctx.wait_for(function()
@@ -133,6 +134,22 @@ assert(
       and text:find(next_description, 1, true) ~= nil
   end, 5000),
   'show_locale_file_eol_usage=false did not drop the badge: ' .. eol_text()
+)
+
+-- An explicit false wins over the automatic fallback, on both servers.
+decorations.setup {
+  mode = 'conceal',
+  debounce_ms = 100,
+  show_locale_file_eol_translation = false,
+  show_locale_file_eol_usage = true,
+}
+decorations.refresh_attached()
+assert(
+  ctx.wait_for(function()
+    local text = eol_text()
+    return not text:find(next_title, 1, true) and not text:find(next_description, 1, true)
+  end, 5000),
+  'show_locale_file_eol_translation=false did not drop the value: ' .. eol_text()
 )
 
 -- Switching back to the code buffer raises the level again, and leaving it for

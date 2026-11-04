@@ -14,7 +14,8 @@ local cursor_timer = nil -- CursorMoved debounce
 local baseline = {} -- winid -> the conceallevel the user had before we raised it
 local raised = {} -- winid -> true while we want conceallevel 2 in that window
 local last_baseline = nil -- the level a new split should start from
-local locale_eol_translation = true
+local locale_eol_translation = true -- nil = auto: show the value when usage counts are absent
+local locale_eol_value_shown = false -- effective state of the last locale render
 local locale_eol_usage = true
 
 local function define_highlights()
@@ -271,14 +272,23 @@ function M.toggle_locale_file_eol()
   if not cfg.debounce_ms then
     return false
   end
-  locale_eol_translation = not locale_eol_translation
+  locale_eol_translation = not M.locale_file_eol()
+  locale_eol_value_shown = locale_eol_translation
   M.refresh_attached()
   return locale_eol_translation
 end
 
+--- The effective state: an explicit setting wins, auto follows the server's
+--- ability to report usage counts (the last locale render answers it).
 ---@return boolean
 function M.locale_file_eol()
-  return cfg.debounce_ms ~= nil and locale_eol_translation
+  if cfg.debounce_ms == nil then
+    return false
+  end
+  if locale_eol_translation ~= nil then
+    return locale_eol_translation
+  end
+  return locale_eol_value_shown
 end
 
 --- Switch the display mode. Unknown modes leave the current one in place.
@@ -445,9 +455,24 @@ local function render_locale_file(bufnr, result)
   end
   clear(bufnr)
   restore_conceallevel_for(bufnr)
-  for _, k in ipairs(result and result.keys or {}) do
+  local keys = result and result.keys or {}
+  --[[ The published server has no usages in x18n/fileKeys, so the default
+    usage badge would leave locale files with no annotation at all. Auto mode
+    falls back to the display-locale value, which proves the file is detected. ]]
+  local has_usages = false
+  for _, k in ipairs(keys) do
+    if k.usages ~= nil then
+      has_usages = true
+      break
+    end
+  end
+  local show_value = locale_eol_translation == true or (locale_eol_translation == nil and not has_usages)
+  if #keys > 0 then
+    locale_eol_value_shown = show_value
+  end
+  for _, k in ipairs(keys) do
     local segments = {}
-    if locale_eol_translation then
+    if show_value then
       segments[#segments + 1] = k.value or 'missing'
     end
     if locale_eol_usage and k.usages ~= nil then
@@ -455,7 +480,7 @@ local function render_locale_file(bufnr, result)
     end
     if #segments > 0 then
       local line = util.to_byte(bufnr, k.range.start)
-      local state = (locale_eol_translation and k.value == nil) and 'missing' or 'ok'
+      local state = (show_value and k.value == nil) and 'missing' or 'ok'
       vim.api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
         virt_text = { { ' ' .. table.concat(segments, ' · '), hl_for(state) } },
         virt_text_pos = 'eol',
@@ -489,6 +514,27 @@ local function request_file_keys(bufnr, client, on_result)
       end)
     end
   end)
+end
+
+--[[ An empty x18n/fileKeys reply is also what a probe that races the server's
+  first index looks like. Poll with backoff before caching the file as plain,
+  so a locale file opened during indexing still gets its badges. Returns false
+  once the budget is spent. ]]
+---@param bufnr integer
+---@param client vim.lsp.Client
+---@return boolean retried
+local function retry_warm_up(bufnr, client)
+  local attempt = retries[bufnr] or 0
+  if attempt >= 5 then
+    return false
+  end
+  retries[bufnr] = attempt + 1
+  vim.defer_fn(function()
+    if pending[bufnr] == nil and not locale_files[bufnr] then
+      M.request(bufnr, client)
+    end
+  end, 500 * 2 ^ attempt)
+  return true
 end
 
 --- Issue the decoration request for (bufnr, client) with debounce and warm-up retry.
@@ -540,21 +586,21 @@ function M.request(bufnr, client)
       request_file_keys(bufnr, client, function(keys)
         if keys then
           locale_files[bufnr] = true
+          plain_files[bufnr] = nil
+          retries[bufnr] = nil
           return vim.schedule(function()
             render_locale_file(bufnr, { keys = keys })
           end)
         end
-        if (result and result.locale or '') ~= '' then
-          plain_files[bufnr] = true
+        --[[ The server looks warm (a locale came back) but the file has no
+          keys: either it is genuinely plain or the index that answers
+          x18n/fileKeys is still landing. Retry before deciding. ]]
+        if retry_warm_up(bufnr, client) then
           return
         end
-        if (retries[bufnr] or 0) < 5 then
-          retries[bufnr] = (retries[bufnr] or 0) + 1
-          vim.defer_fn(function()
-            if pending[bufnr] == nil then
-              M.request(bufnr, client)
-            end
-          end, 1000)
+        retries[bufnr] = nil
+        if (result and result.locale or '') ~= '' then
+          plain_files[bufnr] = true
         end
       end)
     end)
@@ -642,7 +688,8 @@ function M.setup(opts)
     cfg.mode = 'both'
   end
   last_non_origin = canonical(cfg.mode)
-  locale_eol_translation = cfg.show_locale_file_eol_translation ~= false
+  locale_eol_translation = cfg.show_locale_file_eol_translation
+  locale_eol_value_shown = locale_eol_translation == true
   locale_eol_usage = cfg.show_locale_file_eol_usage ~= false
   enabled = true
   define_highlights()

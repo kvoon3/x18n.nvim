@@ -38,10 +38,11 @@ local defaults = {
       too; 'inline' puts the value after the call and 'eol' parks it at the end
       of the line. ]]
     mode = 'conceal',
-    --[[ Locale files show the usage count at the end of each key line. Set
-      show_locale_file_eol_translation = true to also show the display-locale
-      value. ]]
-    show_locale_file_eol_translation = false,
+    --[[ Locale files show the usage count at the end of each key line. The
+      display-locale value is added when the server cannot report counts (the
+      published server has no x18n/fileKeys[].usages); true always shows it,
+      false never does. ]]
+    show_locale_file_eol_translation = nil,
     show_locale_file_eol_usage = true,
     debounce_ms = 400,
     cursor_redraw_ms = 100,
