@@ -9,6 +9,10 @@ mise install
 npm install
 ```
 
+`package.json` exists only for development: it pins the x18n CLI and language
+server (`@x18n/cli`, `@x18n/lsp`) that the test harness and the playground check
+run. The plugin itself is pure Lua and has no Node runtime dependency.
+
 - [stylua](https://github.com/JohnnyMorganz/StyLua) formats Lua.
 - [selene](https://github.com/Kampfkarren/selene) lints Lua. `vim.yml` vendors
   the Neovim standard library selene does not ship, and `selene.toml` points at
@@ -27,8 +31,9 @@ make hooks         # enable the pre-commit hook for this clone
 make format        # stylua, in place
 make format-check  # stylua --check
 make lint          # ls-lint + lefthook validate + selene
-make test          # headless test suite
-make check         # all of the above
+make test          # headless test suite, published server
+make test-fork     # same suite, fork server from X18N_LSP_BIN
+make check         # format-check + lint + test
 ```
 
 The pre-commit hook is defined in `lefthook.yml`: stylua formats staged Lua
@@ -59,32 +64,26 @@ node_modules/.bin/x18n check --root playground/vue-vite
 
 The headless test suite runs against the real server. Each test copies
 `test/fixture` to a temp directory and runs there, so `playground/` keeps
-whatever state the examples have. The harness uses the fork binary linked by
-the root `package.json` (`file:../../f/x18n`); clone the fork next to this
-repository and build it (`pnpm --filter @x18n/lsp build`) before running the
-suite, so keyInfo, completion documentation, usage badges and param-filled
-values are exercised:
+whatever state the examples have.
+
+`make test` uses the published `@x18n/lsp` from the root devDependencies. The
+harness probes `x18n/keyInfo`; tests for fork-only features print
+`skipped, needs the x18n fork`. Everything else must pass.
+
+The fork is a second lane. Build it (`pnpm --filter @x18n/lsp build`) and point
+`X18N_LSP_BIN` at its server entry, so keyInfo, usage badges and param-filled
+values are exercised too:
 
 ```sh
-make test
+X18N_LSP_BIN=~/f/x18n/packages/lsp/bin.mjs make test-fork
 ```
 
-The same loop directly:
+`make test` honors `X18N_LSP_BIN` as well; point it at any other server binary
+to change the lane. The same loop directly:
 
 ```sh
 for t in test/*.lua; do [ "$t" = test/harness.lua ] || nvim -l test/harness.lua "$t"; done
 ```
-
-To run the suite against the published server, use the isolated install under
-`test/upstream`:
-
-```sh
-make test-upstream
-```
-
-The target installs `@x18n/lsp@0.1.9` there on first use. Tests that need the
-fork print `skipped, needs the x18n fork`. The rest must pass. Set
-`X18N_LSP_BIN` to point the harness at another server binary.
 
 The playground's rendering has its own project-local verification skill:
 [`.claude/skills/verify-x18n-nvim/SKILL.md`](../.claude/skills/verify-x18n-nvim/SKILL.md).

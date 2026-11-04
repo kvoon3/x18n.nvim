@@ -40,7 +40,7 @@ function M.check()
       if not done then
         vim.health.warn 'x18n/keyInfo probe timed out'
       elseif supported then
-        vim.health.ok 'x18n/keyInfo available (fork features enabled)'
+        vim.health.ok 'x18n/keyInfo available (extended UI enabled)'
       else
         vim.health.warn 'x18n/keyInfo not available; the popup, copy translation and per-locale add menu will fall back'
       end

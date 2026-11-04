@@ -32,9 +32,9 @@ vim.api.nvim_create_autocmd('VimLeavePre', {
 })
 
 vim.opt.runtimepath:prepend(plugin_root)
--- Pin the server to the fork binary linked at the repo root by default, so
--- tests exercise the exact server the protocol was written against. Set
--- X18N_LSP_BIN to run the same tests against the published upstream server.
+-- The root devDependency is the published server. Set X18N_LSP_BIN to run the
+-- same suite against a local kvoon3/x18n build, which implements the extended
+-- UI methods.
 local bin = vim.env.X18N_LSP_BIN or (plugin_root .. '/node_modules/@x18n/lsp/bin.mjs')
 local opts = {
   lsp = {
@@ -79,11 +79,43 @@ if not decorations_disabled then
   end)
 end
 
+--[[ Published servers through 0.1.10 cover standard LSP, the shared x18n/*
+  methods, completion resolve and embedded-<i18n> decorations. The kvoon3/x18n
+  fork adds x18n/keyInfo, locale-file usage counts and param-filled values.
+  Probe keyInfo once: an unknown method answers with an LSP error, a supported
+  one answers null on a line without a key. ]]
+local function key_info_available()
+  local client = vim.lsp.get_clients({ name = 'x18n' })[1]
+  if not client then
+    return false
+  end
+  local done, supported = false, false
+  client:request('x18n/keyInfo', {
+    uri = vim.uri_from_bufnr(0),
+    position = { line = 0, character = 0 },
+  }, function(err)
+    supported = err == nil
+    done = true
+  end)
+  assert(
+    wait_for(function()
+      return done
+    end, 5000),
+    'x18n/keyInfo probe timed out'
+  )
+  return supported
+end
+
+local upstream = not key_info_available()
+if upstream then
+  print 'server has no x18n/keyInfo: fork-only tests skip'
+end
+
 local chunk = assert(loadfile(script))
 chunk {
   playground = playground_fixture,
   wait_for = wait_for,
   buf = vim.api.nvim_get_current_buf(),
-  upstream = vim.env.X18N_UPSTREAM == '1',
+  upstream = upstream,
 }
 vim.cmd 'qa!'

@@ -1,9 +1,9 @@
 {
   "name": "x18n.nvim",
   "private": true,
+  "description": "Development dependencies only: the x18n CLI and language server used by the tests and the playground check. The plugin has no Node runtime dependency.",
   "devDependencies": {
-    "@x18n/cli": "^0.1.3",
-    "@x18n/core": "file:../../f/x18n/packages/core",
-    "@x18n/lsp": "file:../../f/x18n/packages/lsp"
+    "@x18n/cli": "0.1.10",
+    "@x18n/lsp": "0.1.10"
   }
 }

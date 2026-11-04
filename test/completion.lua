@@ -1,11 +1,7 @@
 -- Completion: the server answers textDocument/completion inside a t() key
 -- slot with the project's keys, each carrying the source value as detail and
 -- a textEdit spanning the slot. This is what blink.cmp renders through its
--- lsp source.
-if vim.env.X18N_UPSTREAM then
-  print 'skipped, needs the x18n fork'
-  return
-end
+-- lsp source. Completion resolve and all-locale docs ship in x18n 0.1.10.
 local ctx = ...
 
 local function cursor_onto(buf, pattern)

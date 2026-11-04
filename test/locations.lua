@@ -1,7 +1,8 @@
 -- Locale pairing: keyInfo reports which locales define the key, so a key
 -- present in only some locales is paired with the right file. The server no
 -- longer labels implementation locations with a non-standard data field.
-if vim.env.X18N_UPSTREAM then
+local ctx = ...
+if ctx.upstream then
   print 'skipped, needs the x18n fork'
   return
 end

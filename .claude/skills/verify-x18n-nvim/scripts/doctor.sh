@@ -35,23 +35,28 @@ else
   bad 'rsync is not on PATH (the checker copies each project to a temp dir)'
 fi
 
-lsp_bin="$repo/node_modules/@x18n/lsp/bin.mjs"
-if [ -x "$lsp_bin" ]; then
+lsp_bin="${X18N_LSP_BIN:-$repo/node_modules/@x18n/lsp/bin.mjs}"
+resolved=
+if [ -f "$lsp_bin" ]; then
   resolved=$(node -e 'try { console.log(require("node:fs").realpathSync(process.argv[1])) } catch (e) { process.exit(1) }' "$lsp_bin" 2>/dev/null)
   if [ -n "${resolved:-}" ] && [ -f "$(dirname "$resolved")/dist/index.mjs" ]; then
     ok "x18n-lsp -> $resolved"
   else
-    bad "x18n-lsp resolves to ${resolved:-<nothing>} but dist/index.mjs is missing; build the fork"
+    bad "x18n-lsp resolves to ${resolved:-<nothing>} but dist/index.mjs is missing; build the server"
   fi
 else
-  bad "missing $lsp_bin; run npm install at the repo root"
+  bad "missing $lsp_bin; run npm install at the repo root, or check X18N_LSP_BIN"
 fi
 
-builtins=$(node -e 'const fs=require("node:fs"), path=require("node:path"); try { const p=fs.realpathSync(process.argv[1]); console.log(path.resolve(path.dirname(p), "../builtins/dist/checks.mjs")) } catch (e) { process.exit(1) }' "$lsp_bin" 2>/dev/null)
-if [ -n "${builtins:-}" ] && [ -f "$builtins" ]; then
-  ok "fork builtins -> $builtins"
-else
-  bad 'fork builtins/dist/checks.mjs is missing; run pnpm --filter @x18n/lsp build in the fork'
+# A workspace checkout keeps builtins in a sibling package; the published
+# package ships it under node_modules/@x18n/builtins.
+if [ -n "${resolved:-}" ] && [ -f "$(dirname "$resolved")/../builtins/package.json" ]; then
+  builtins=$(node -e 'const fs=require("node:fs"), path=require("node:path"); try { const p=fs.realpathSync(process.argv[1]); console.log(path.resolve(path.dirname(p), "../builtins/dist/checks.mjs")) } catch (e) { process.exit(1) }' "$lsp_bin" 2>/dev/null)
+  if [ -n "${builtins:-}" ] && [ -f "$builtins" ]; then
+    ok "x18n builtins -> $builtins"
+  else
+    bad 'builtins/dist/checks.mjs is missing; build the x18n workspace'
+  fi
 fi
 
 if [ -x "$repo/node_modules/.bin/x18n" ]; then

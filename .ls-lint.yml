@@ -15,7 +15,6 @@ ignore:
   - node_modules
   - playground
   - test/fixture
-  - test/upstream/node_modules
   - LICENSE
   - README.md
   - .gitignore

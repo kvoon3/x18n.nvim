@@ -20,11 +20,14 @@ are never touched.
 Prerequisites:
 
 - Neovim 0.11+ and Node on `PATH`.
-- Root dev dependencies installed: `npm install` at the repo root.
-- The fork linked by the root `package.json` built:
-  `cd ~/f/x18n && pnpm --filter @x18n/lsp build`
+- Root dev dependencies installed: `npm install` at the repo root. This pins
+  the published `@x18n/lsp` 0.1.10, the default server.
 - The playground present: `playground/vue-vite`, `react-i18next`, `next-intl`,
   `laravel`, `rails`, `angular`, `monorepo`, `i18n-ally`.
+
+To verify the fork-only features (keyInfo popup data, param-filled values,
+locale-file usage counts), build the fork and export
+`X18N_LSP_BIN=~/f/x18n/packages/lsp/bin.mjs` before any script below.
 
 There is no long-lived app process. "Launch" is one headless nvim per project,
 started by the wrapper; it copies the project, opens each manifest file, waits for
@@ -55,11 +58,11 @@ Run this first whenever a result looks off; it is read-only and starts no server
 .claude/skills/verify-x18n-nvim/scripts/doctor.sh
 ```
 
-It checks Neovim, Node, `rsync`, the root `node_modules/@x18n/lsp/bin.mjs` and
-its
-resolved fork `dist/index.mjs`, the fork builtins build, the `x18n` CLI, all eight
-playground directories, and that `nvim --clean --headless` starts. The last line
-is `ready` or `not ready`; the exit code is the gate.
+It checks Neovim, Node, `rsync`, the server binary (`X18N_LSP_BIN` or the root
+`node_modules/@x18n/lsp/bin.mjs`) and its resolved `dist/index.mjs`, the builtins
+build, the `x18n` CLI, all eight playground directories, and that
+`nvim --clean --headless` starts. The last line is `ready` or `not ready`; the
+exit code is the gate.
 
 ## Drive
 
@@ -89,7 +92,8 @@ For each project the checker:
 1. rsyncs `playground/<project>` to `$TMPDIR/x18n-verify.*/<project>`;
 2. starts `nvim --clean --headless` with a 300x600 grid, prepends the plugin,
    disables diagnostic virtual text/signs (so the screen contains only decoration
-   text), and configures the fork server binary and project root markers;
+   text), and configures the server binary (`X18N_LSP_BIN` or the root
+   devDependency) and project root markers;
 3. opens every file in `scripts/playgrounds.lua`, runs `filetype detect`, and
    waits for the x18n client and decoration extmarks;
 4. reads `x18n/projects`, determines the file's project and locale list, and sets
@@ -178,14 +182,16 @@ cache lives in the temp copy.
 there, then extend the wrapper's project list (kept in sync by a comment) and the
 feature map Gotchas if it uses a new filetype or locale layout.
 
-## Current baseline (2026-11-03)
+## Current baseline (2026-11-04)
 
-All eight playgrounds pass in the default run. The fixes this verifier drove:
+All eight playgrounds pass against the published `@x18n/lsp` 0.1.10, the default
+server. The fixes this verifier drove:
 
 - `lsp.filetypes` now includes `html`, `php`, `blade`, `eruby` and `ruby`, so
   Laravel, Rails and the Angular template attach.
-- The fork's `x18n/decorations` returns code usages for a component with an
-  embedded `<i18n>` block, so vue-vite `TodoList.vue` renders its inline values.
+- `x18n/decorations` returns code usages for a component with an embedded
+  `<i18n>` block (merged in x18n 0.1.10, PR #129), so vue-vite `TodoList.vue`
+  renders its inline values.
 - Usages without an enclosing call (the `v-t` directive) no longer crash render;
   the fallback uses the key range (`lua/x18n/decorations.lua`).
 

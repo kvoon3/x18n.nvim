@@ -1,9 +1,9 @@
 -- ShowTranslations popup (all locales for the key) and explain float.
-if vim.env.X18N_UPSTREAM then
+local ctx = ...
+if ctx.upstream then
   print 'skipped, needs the x18n fork'
   return
 end
-local ctx = ...
 local actions = require 'x18n.actions'
 
 local function cursor_onto(buf, pattern)

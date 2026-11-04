@@ -31,16 +31,18 @@ decorates and restored on mode change or `:X18nToggleDecorations`.
 ## Completion
 
 Native LSP completion inside `t('...')` slots. Items carry the source value as
-detail. With the fork, the selected item resolves to a documentation panel with
-its value in every locale, missing ones marked.
+detail and resolve to a documentation panel with the value in every locale,
+missing ones marked.
 
 ## Locale-file annotations
 
-Inside `en.json`, `zh-CN.json`, `ja.json`, `fr.json` and friends, each key line
-shows its usage count at the end of the line. The value is already in the file,
-so the display-locale value is opt-in: set
-`show_locale_file_eol_translation = true` or use `:X18nToggleLocaleFileEol`.
-`show_locale_file_eol_usage = false` hides the badge.
+Inside `en.json`, `ja.yml`, `zh-CN.json` and friends, each key line shows its
+usage count at the end of the line. The value is already in the file, so the
+display-locale value is opt-in: set `show_locale_file_eol_translation = true`
+or use `:X18nToggleLocaleFileEol`. When the server reports no usage counts (the
+published server), the value is shown automatically so the file still proves it
+was detected; `show_locale_file_eol_translation = false` turns that fallback
+off. `show_locale_file_eol_usage = false` hides the badge.
 
 ## Definition and usages
 
@@ -129,9 +131,9 @@ picker of choice. Definitions use the quickfix, like references.
 
 ## Server compatibility
 
-The plugin works with the published `@x18n/lsp` for standard LSP and the shared
-`x18n/*` methods. The `kvoon3/x18n` fork adds `x18n/keyInfo` and the fields
-behind the translations popup, copy translation, per-locale add menu, locale
-labels, usage badges, completion documentation, param-filled values and inline
-values in components with an embedded `<i18n>` block. See
+The plugin works with the published `@x18n/lsp` 0.1.10 for standard LSP, the
+shared `x18n/*` methods, completion docs and inline values in components with an
+embedded `<i18n>` block. The `kvoon3/x18n` fork adds `x18n/keyInfo` and the
+fields behind the translations popup, copy translation, per-locale add menu,
+locale labels, usage badges and param-filled values. See
 [Compatibility](compatibility.md) for the exact contract and every fallback.

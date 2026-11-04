@@ -1,10 +1,10 @@
 -- keyInfo resolves the whole call, the closing paren, and the end-of-line
 -- annotation. Standard hover stays strict to the key literal.
-if vim.env.X18N_UPSTREAM then
+local ctx = ...
+if ctx.upstream then
   print 'skipped, needs the x18n fork'
   return
 end
-local ctx = ...
 local client = require('x18n').get_client()
 local util = require 'x18n.util'
 

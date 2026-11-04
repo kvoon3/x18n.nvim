@@ -21,7 +21,7 @@ UI.
 - **Locale files** — usage counts beside every key line from the fork, with
   opt-in display-locale values.
 - **Native LSP** — completion, hover, rename, references, code lens and
-  diagnostics. The fork adds all-locale completion docs.
+  diagnostics, with all-locale completion docs.
 - **Navigation** — definition and usage lists, key and value search, locale
   cycling.
 - **Editing** — per-locale code actions for missing keys, a batch add, and
@@ -31,12 +31,12 @@ UI.
 ## Requirements
 
 - Neovim 0.11+ (`vim.lsp.config`)
-- [`x18n-lsp`](https://x18n.dev) 0.1.9 or newer: `npm install -g @x18n/lsp`
+- [`x18n-lsp`](https://x18n.dev) 0.1.10 or newer: `npm install -g @x18n/lsp`
 
-The published server covers standard LSP and the shared `x18n/*` methods. The
-`kvoon3/x18n` fork adds `x18n/keyInfo` and the fields behind the translations
-popup, copy translation, per-locale add menu, locale labels, usage badges,
-completion documentation and param-filled values. See
+The published server covers standard LSP, the shared `x18n/*` methods and
+all-locale completion docs. The `kvoon3/x18n` fork adds `x18n/keyInfo` and the
+fields behind the translations popup, copy translation, per-locale add menu,
+locale labels, usage badges and param-filled values. See
 [Compatibility](docs/compatibility.md) for the exact contract and every
 fallback.
 
@@ -56,8 +56,8 @@ manage `vim.lsp.config('x18n', ...)` yourself, `decorations = false` to disable
 the inline annotations, or see [Configuration](docs/configuration.md) for every
 option.
 
-Structured hover data, usage counts and param-filled values come from the
-`kvoon3/x18n` fork; the published server keeps the native behavior described in
+Usage counts and param-filled values come from the `kvoon3/x18n` fork; the
+published server keeps the native behavior described in
 [Compatibility](docs/compatibility.md).
 
 ## License
