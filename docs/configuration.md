@@ -64,8 +64,9 @@ suppresses them and clears the ones already shown; a table is forwarded to
 ## Locale flags
 
 Locale flags come from the server. Set `lsp.init_options.showFlags = false` to
-show locale codes only in hovers and completion docs, for terminals whose emoji
-font lacks a flag. Quickfix definitions already use the locale codes.
+show locale codes only, for terminals whose emoji font lacks a flag. The setting
+affects standard hover; with the fork it also affects the translations popup and
+completion docs. Quickfix definitions use the locale codes.
 
 ## Reloading
 

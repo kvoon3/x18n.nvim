@@ -18,15 +18,15 @@ mapping:
 | `show_mode` `both` / `translation` / `translation_conceal` / `origin` | the same names in `decorations.mode`, plus `set_mode` / `get_mode` |
 | `:I18nShowTranslations` | `:X18nShowTranslations`, with `translation_popup.keys.copy_key` in the float |
 | `:I18nDefinitionNextLocale` | `:X18nNextDefinition` |
-| `i18n_definition()` | `:X18nDefinition` or `require('x18n.actions').definition()`; lists the locale definitions in the quickfix (upstream jumps directly) |
+| `i18n_definition()` | `:X18nDefinition` or `require('x18n.actions').definition()`; lists the locale definitions in the quickfix (a single definition jumps directly) |
 | `:I18nKeyUsages` | `:X18nKeyUsages` |
 | `:I18nAddKey` | `Ctrl+.` per-locale code actions, or `:X18nAddKey` for the batch prompt (refuses keys that already exist; edits stay unsaved for review) |
-| `i18n_keys` picker | `:X18nKeys [action]` with `jump`, `split`, `vsplit`, `tab`, `copy`, `copy_translation` and `choose_locale`; the list shows key and source value, and the translations popup shows the rest |
+| `i18n_keys` picker | `:X18nKeys [action]` with `jump`, `split`, `vsplit`, `tab`, `copy`, `copy_translation` (needs the fork) and `choose_locale`; the list shows key and source value, and the translations popup shows the rest |
 | `navigation.open_cmd` | the same option |
 | `diagnostic = false` or a table | the same option |
 | locale-file EOL and usage badges | both on by default; `:X18nToggleLocaleFileEol` and `show_locale_file_eol_usage` are independent |
 | diagnostics | native LSP diagnostics from the server |
-| blink.cmp / nvim-cmp source | native LSP completion: items carry the source value as detail and replace the key slot; `completionItem/resolve` supplies the all-locale documentation panel |
+| blink.cmp / nvim-cmp source | native LSP completion: items carry the source value as detail and replace the key slot; with the fork, `completionItem/resolve` supplies the all-locale documentation panel |
 | fzf-lua / telescope / snacks pickers | `vim.ui.select`, so snacks, telescope-ui-select or dressing render them |
 | `usage.popup_type` | `vim.ui.select` (no backend switch) |
 | `usage.notify_no_key` | the same option |

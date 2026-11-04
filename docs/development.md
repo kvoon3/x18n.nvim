@@ -60,10 +60,10 @@ node_modules/.bin/x18n check --root playground/vue-vite
 The headless test suite runs against the real server. Each test copies
 `test/fixture` to a temp directory and runs there, so `playground/` keeps
 whatever state the examples have. The harness uses the fork binary linked by
-the root `package.json` (`file:../../f/x18n`). Build that fork
-(`pnpm --filter @x18n/lsp build`) before running the suite, so structured
-hover, completion documentation, usage badges and param-filled values are
-exercised:
+the root `package.json` (`file:../../f/x18n`); clone the fork next to this
+repository and build it (`pnpm --filter @x18n/lsp build`) before running the
+suite, so keyInfo, completion documentation, usage badges and param-filled
+values are exercised:
 
 ```sh
 make test
@@ -74,6 +74,17 @@ The same loop directly:
 ```sh
 for t in test/*.lua; do [ "$t" = test/harness.lua ] || nvim -l test/harness.lua "$t"; done
 ```
+
+To run the suite against the published server, use the isolated install under
+`test/upstream`:
+
+```sh
+make test-upstream
+```
+
+The target installs `@x18n/lsp@0.1.9` there on first use. Tests that need the
+fork print `skipped, needs the x18n fork`. The rest must pass. Set
+`X18N_LSP_BIN` to point the harness at another server binary.
 
 The playground's rendering has its own project-local verification skill:
 [`.claude/skills/verify-x18n-nvim/SKILL.md`](../.claude/skills/verify-x18n-nvim/SKILL.md).

@@ -26,6 +26,10 @@
 | `:X18nExplain` | Show how the server understood the workspace |
 | `:X18nOpenUi` | Open the x18n web UI in the browser |
 
+Features that need the `kvoon3/x18n` fork are listed in
+[Compatibility](compatibility.md). The shared commands work with the published
+server.
+
 ## Lua API
 
 Everything is also reachable as Lua for keymaps:
