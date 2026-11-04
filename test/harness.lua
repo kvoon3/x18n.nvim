@@ -32,13 +32,13 @@ vim.api.nvim_create_autocmd('VimLeavePre', {
 })
 
 vim.opt.runtimepath:prepend(plugin_root)
--- Pin the server to the fork binary linked at the repo root, so tests exercise
--- the exact server the protocol analysis was written against rather than
--- whatever is on PATH. Run `npm install` and build the fork's dist before the
--- suite.
+-- Pin the server to the fork binary linked at the repo root by default, so
+-- tests exercise the exact server the protocol was written against. Set
+-- X18N_LSP_BIN to run the same tests against the published upstream server.
+local bin = vim.env.X18N_LSP_BIN or (plugin_root .. '/node_modules/@x18n/lsp/bin.mjs')
 local opts = {
   lsp = {
-    cmd = { 'node', plugin_root .. '/node_modules/.bin/x18n-lsp', '--stdio' },
+    cmd = { 'node', bin, '--stdio' },
   },
 }
 if decorations_disabled then
@@ -84,5 +84,6 @@ chunk {
   playground = playground_fixture,
   wait_for = wait_for,
   buf = vim.api.nvim_get_current_buf(),
+  upstream = vim.env.X18N_UPSTREAM == '1',
 }
 vim.cmd 'qa!'

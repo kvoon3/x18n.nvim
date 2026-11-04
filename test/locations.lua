@@ -1,5 +1,10 @@
--- Locale pairing: the fork labels implementation locations with their locale,
--- so a key present in only some locales cannot be paired with the wrong file.
+-- Locale pairing: keyInfo reports which locales define the key, so a key
+-- present in only some locales is paired with the right file. The server no
+-- longer labels implementation locations with a non-standard data field.
+if vim.env.X18N_UPSTREAM then
+  print 'skipped, needs the x18n fork'
+  return
+end
 local locales = require 'x18n.locales'
 
 local client = require('x18n').get_client()
@@ -30,44 +35,85 @@ vim.wait(5000, function()
   return impl_done
 end, 50)
 assert(impl and #impl >= 2, 'expected two implementation locations')
-local codes = {}
 for _, loc in ipairs(impl) do
-  assert(loc.data and loc.data.locale, 'implementation location has no locale label')
-  codes[loc.data.locale] = true
+  assert(loc.data == nil, 'implementation location still carries a data field')
+end
+
+local pairs_out
+locales.key_locations(client, location.uri, location.range.start, function(result)
+  pairs_out = result
+end)
+vim.wait(5000, function()
+  return pairs_out ~= nil
+end, 25)
+assert(pairs_out and #pairs_out == #impl, 'key_locations lost a definition')
+local codes = {}
+for _, pair in ipairs(pairs_out) do
+  assert(pair.code, 'key_locations did not label a definition')
+  codes[pair.code] = true
 end
 for _, code in ipairs { 'en', 'zh-CN', 'ja', 'fr' } do
   assert(codes[code], 'labels do not cover ' .. code)
 end
 
--- A labeled fr location must not be paired with en by index.
+-- A key that exists in only two locales must not be paired by raw index.
 local fake = {
   request = function(_, method, _, on_result)
-    if method == 'textDocument/hover' then
+    if method == 'x18n/keyInfo' then
       on_result(nil, {
-        x18n = {
-          value = {
-            locales = {
-              { code = 'en', value = 'a' },
-              { code = 'fr', value = 'b' },
-            },
-          },
+        locales = {
+          { code = 'en', present = true },
+          { code = 'zh-CN', present = false },
+          { code = 'ja', present = false },
+          { code = 'fr', present = true },
         },
       })
     elseif method == 'textDocument/implementation' then
       on_result(nil, {
         {
-          uri = 'file:///fr.json',
+          uri = 'file:///en.json',
           range = { start = { line = 0, character = 0 }, ['end'] = { line = 0, character = 1 } },
-          data = { locale = 'fr' },
+        },
+        {
+          uri = 'file:///fr.json',
+          range = { start = { line = 1, character = 0 }, ['end'] = { line = 1, character = 1 } },
         },
       })
     end
   end,
 }
-local pairs_out
+local fake_pairs
 locales.key_locations(fake, 'file:///code.js', { line = 0, character = 0 }, function(result)
-  pairs_out = result
+  fake_pairs = result
 end)
-assert(#pairs_out == 1, 'expected one paired location, got ' .. #pairs_out)
-assert(pairs_out[1].code == 'fr', 'labeled location paired with ' .. pairs_out[1].code)
+assert(#fake_pairs == 2, 'expected two paired locations, got ' .. #fake_pairs)
+assert(fake_pairs[1].code == 'en', 'first location paired with ' .. tostring(fake_pairs[1].code))
+assert(fake_pairs[2].code == 'fr', 'second location paired with ' .. tostring(fake_pairs[2].code))
+
+-- A count mismatch leaves every label out instead of guessing.
+local mismatched = vim.deepcopy(fake)
+mismatched.request = function(_, method, _, on_result)
+  if method == 'x18n/keyInfo' then
+    on_result(nil, { locales = { { code = 'en', present = true } } })
+  elseif method == 'textDocument/implementation' then
+    on_result(nil, {
+      {
+        uri = 'file:///en.json',
+        range = { start = { line = 0, character = 0 }, ['end'] = { line = 0, character = 1 } },
+      },
+      {
+        uri = 'file:///fr.json',
+        range = { start = { line = 0, character = 0 }, ['end'] = { line = 0, character = 1 } },
+      },
+    })
+  end
+end
+local unlabeled
+locales.key_locations(mismatched, 'file:///code.js', { line = 0, character = 0 }, function(result)
+  unlabeled = result
+end)
+assert(#unlabeled == 2, 'expected two unlabeled locations')
+for _, pair in ipairs(unlabeled) do
+  assert(pair.code == nil, 'mismatched counts produced a label')
+end
 print 'locations ok'

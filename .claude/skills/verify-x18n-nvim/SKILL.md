@@ -55,7 +55,8 @@ Run this first whenever a result looks off; it is read-only and starts no server
 .claude/skills/verify-x18n-nvim/scripts/doctor.sh
 ```
 
-It checks Neovim, Node, `rsync`, the root `node_modules/.bin/x18n-lsp` and its
+It checks Neovim, Node, `rsync`, the root `node_modules/@x18n/lsp/bin.mjs` and
+its
 resolved fork `dist/index.mjs`, the fork builtins build, the `x18n` CLI, all eight
 playground directories, and that `nvim --clean --headless` starts. The last line
 is `ready` or `not ready`; the exit code is the gate.

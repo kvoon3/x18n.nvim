@@ -35,8 +35,13 @@ local joined = table.concat(texts, '\n')
 -- Display locale defaults to the source locale (en).
 assert(joined:find('Hello x18n', 1, true), 'expected en value at EOL: ' .. joined)
 assert(joined:find('A playground', 1, true), 'expected second en value at EOL: ' .. joined)
--- The server's usage count rides before the value.
-assert(joined:find('1 usage', 1, true), 'expected usage badges at EOL: ' .. joined)
+-- The server's usage count rides before the value on the fork. Upstream only
+-- ships the value.
+if ctx.upstream then
+  assert(not joined:find('usage', 1, true), 'upstream EOL text claims a usage badge: ' .. joined)
+else
+  assert(joined:find('1 usage', 1, true), 'expected usage badges at EOL: ' .. joined)
+end
 
 local function eol_text()
   local out = {}
@@ -83,7 +88,7 @@ assert(
     local text = eol_text()
     return not text:find(next_title, 1, true)
       and not text:find(next_description, 1, true)
-      and text:find('usage', 1, true) ~= nil
+      and (ctx.upstream or text:find('usage', 1, true) ~= nil)
   end, 5000),
   'EOL translation toggle changed the usage badges: ' .. eol_text()
 )

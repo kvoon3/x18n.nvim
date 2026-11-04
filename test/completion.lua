@@ -2,6 +2,10 @@
 -- slot with the project's keys, each carrying the source value as detail and
 -- a textEdit spanning the slot. This is what blink.cmp renders through its
 -- lsp source.
+if vim.env.X18N_UPSTREAM then
+  print 'skipped, needs the x18n fork'
+  return
+end
 local ctx = ...
 
 local function cursor_onto(buf, pattern)

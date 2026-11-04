@@ -1,6 +1,27 @@
 -- Key picker: copy key, copy the display-locale translation, jump to the
 -- display-locale definition, choose a locale, and open in a split.
 local ctx = ...
+if ctx.upstream then
+  -- Without keyInfo, copy_translation must not copy the source text under a
+  -- display-locale label.
+  local keys = require 'x18n.keys'
+  vim.ui.select = function(items, _, on_choice)
+    for _, item in ipairs(items) do
+      if item.key == 'app.title' then
+        return on_choice(item)
+      end
+    end
+    on_choice(nil)
+  end
+  vim.fn.setreg('+', '')
+  keys.pick 'copy_translation'
+  vim.wait(1000, function()
+    return false
+  end, 50)
+  assert(vim.fn.getreg '+' == '', 'copy_translation copied without keyInfo: ' .. vim.fn.getreg '+')
+  print 'keys fallback ok'
+  return
+end
 local keys = require 'x18n.keys'
 local actions = require 'x18n.actions'
 
@@ -46,7 +67,7 @@ assert(
   'copy_translation failed: ' .. vim.fn.getreg '+'
 )
 
--- A non-source display locale goes through the structured hover path.
+-- A non-source display locale goes through the keyInfo path.
 actions.set_display_locale 'ja'
 assert(
   ctx.wait_for(function()
@@ -113,21 +134,19 @@ assert(
 )
 assert(vim.api.nvim_buf_get_name(0):find('en.json', 1, true), 'split landed in the wrong buffer')
 
--- Upstream servers have no structured hover; copy falls back to the symbol's
--- source value instead of reporting a missing translation.
+-- A server without keyInfo must not copy the source text under a display-locale
+-- label. The register stays untouched.
 only()
 local locales = require 'x18n.locales'
-local original_hover = locales.hover_value
-locales.hover_value = function(_, _, _, on_result)
+local original_key_info = locales.key_info
+locales.key_info = function(_, _, _, on_result)
   on_result(nil)
 end
 vim.fn.setreg('+', '')
 keys.pick 'copy_translation'
-assert(
-  ctx.wait_for(function()
-    return vim.fn.getreg '+' == 'Hello x18n'
-  end, 5000),
-  'copy_translation did not fall back to the source value'
-)
-locales.hover_value = original_hover
+vim.wait(1000, function()
+  return false
+end, 50)
+assert(vim.fn.getreg '+' == '', 'copy_translation copied without keyInfo: ' .. vim.fn.getreg '+')
+locales.key_info = original_key_info
 print 'keys ok'

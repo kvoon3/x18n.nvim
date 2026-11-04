@@ -2,6 +2,13 @@
 -- the code usage, and on the missing-translation warning line in a locale file.
 -- Only the chosen locale is written; the native code actions are the fallback.
 local ctx = ...
+if ctx.upstream then
+  -- The client-built per-locale menu needs keyInfo. Without it the action
+  -- declines, so Ctrl+. runs the native code actions.
+  assert(require('x18n.actions').code_action() == false, 'code_action should decline without keyInfo')
+  print 'code action fallback ok'
+  return
+end
 
 local function cursor_onto(pattern)
   local buf = vim.api.nvim_get_current_buf()

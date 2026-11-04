@@ -1,6 +1,10 @@
 -- Param interpolation: a statically known call argument fills the message
 -- placeholder in the inline preview. `const user = 'Ada'` is in the fixture,
 -- so the greeting must read `Hello Ada`, not the raw `Hello {name}`.
+if vim.env.X18N_UPSTREAM then
+  print 'skipped, needs the x18n fork'
+  return
+end
 local ctx = ...
 local decorations = require 'x18n.decorations'
 local ns = decorations.namespace()

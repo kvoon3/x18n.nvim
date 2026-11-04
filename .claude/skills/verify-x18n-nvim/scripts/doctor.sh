@@ -35,7 +35,7 @@ else
   bad 'rsync is not on PATH (the checker copies each project to a temp dir)'
 fi
 
-lsp_bin="$repo/node_modules/.bin/x18n-lsp"
+lsp_bin="$repo/node_modules/@x18n/lsp/bin.mjs"
 if [ -x "$lsp_bin" ]; then
   resolved=$(node -e 'try { console.log(require("node:fs").realpathSync(process.argv[1])) } catch (e) { process.exit(1) }' "$lsp_bin" 2>/dev/null)
   if [ -n "${resolved:-}" ] && [ -f "$(dirname "$resolved")/dist/index.mjs" ]; then

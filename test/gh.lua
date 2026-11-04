@@ -3,6 +3,29 @@
 -- translations popup on a key and falls back to the previous binding
 -- elsewhere.
 local ctx = ...
+if ctx.upstream then
+  -- Without keyInfo the popup declines and the keymap falls back to the
+  -- binding that was there before, here the native hover.
+  assert(
+    ctx.wait_for(function()
+      local m = vim.fn.maparg('gh', 'n', false, true)
+      return m ~= nil and m.callback ~= nil
+    end, 5000),
+    'gh not bound on x18n buffers'
+  )
+  local hovered = false
+  local orig_hover = vim.lsp.buf.hover
+  vim.lsp.buf.hover = function()
+    hovered = true
+  end
+  local maps = vim.fn.maparg('gh', 'n', false, true)
+  vim.api.nvim_win_set_cursor(0, { 11, 30 })
+  maps.callback()
+  vim.lsp.buf.hover = orig_hover
+  assert(hovered, 'gh on a key did not fall back to native hover')
+  print 'gh fallback ok'
+  return
+end
 
 -- The schedule needs one event-loop pass after attach.
 assert(

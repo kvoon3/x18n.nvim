@@ -1,0 +1,7 @@
+{
+  "name": "x18n-nvim-upstream-test",
+  "private": true,
+  "devDependencies": {
+    "@x18n/lsp": "0.1.9"
+  }
+}

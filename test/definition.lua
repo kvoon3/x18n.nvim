@@ -53,10 +53,22 @@ assert(#list.items == 4, 'quickfix did not list four definitions: ' .. #list.ite
 local function item_name(item)
   return vim.api.nvim_buf_get_name(item.bufnr)
 end
-assert(list.items[1].text:find('[en (source, display)]', 1, true), 'en item missed its markers: ' .. list.items[1].text)
-assert(list.items[2].text:find('[fr]', 1, true), 'fr item missed: ' .. list.items[2].text)
-assert(list.items[3].text:find('[ja]', 1, true), 'ja item missed: ' .. list.items[3].text)
-assert(list.items[4].text:find('[zh-CN]', 1, true), 'zh-CN item missed: ' .. list.items[4].text)
+if ctx.upstream then
+  for i, code in ipairs { 'en', 'fr', 'ja', 'zh-CN' } do
+    assert(
+      list.items[i].text:find('[' .. code .. '.json]', 1, true),
+      'upstream item ' .. i .. ' lost its file label: ' .. list.items[i].text
+    )
+  end
+else
+  assert(
+    list.items[1].text:find('[en (source, display)]', 1, true),
+    'en item missed its markers: ' .. list.items[1].text
+  )
+  assert(list.items[2].text:find('[fr]', 1, true), 'fr item missed: ' .. list.items[2].text)
+  assert(list.items[3].text:find('[ja]', 1, true), 'ja item missed: ' .. list.items[3].text)
+  assert(list.items[4].text:find('[zh-CN]', 1, true), 'zh-CN item missed: ' .. list.items[4].text)
+end
 for i, code in ipairs { 'en', 'fr', 'ja', 'zh-CN' } do
   assert(
     item_name(list.items[i]):find(code .. '.json', 1, true),
@@ -84,9 +96,24 @@ assert(cursor_onto 'app%.title', 'lost app.title call after the locale switch')
 assert(actions.definition() == true, 'definition returned false after the locale switch')
 list = qf()
 assert(#list.items == 4, 'quickfix lost locales after the switch')
-assert(list.items[3].text:find('[ja (display)]', 1, true), 'ja item missed the display marker: ' .. list.items[3].text)
-assert(list.items[1].text:find('[en (source)]', 1, true), 'en item missed the source marker: ' .. list.items[1].text)
-assert(list.items[4].text:find('display', 1, true) == nil, 'zh-CN item wrongly claims display: ' .. list.items[4].text)
+if ctx.upstream then
+  assert(list.items[3].text:find('[ja.json]', 1, true), 'upstream ja item lost its file label: ' .. list.items[3].text)
+  assert(list.items[1].text:find('[en.json]', 1, true), 'upstream en item lost its file label: ' .. list.items[1].text)
+  assert(
+    list.items[4].text:find('display', 1, true) == nil,
+    'upstream zh-CN item wrongly claims display: ' .. list.items[4].text
+  )
+else
+  assert(
+    list.items[3].text:find('[ja (display)]', 1, true),
+    'ja item missed the display marker: ' .. list.items[3].text
+  )
+  assert(list.items[1].text:find('[en (source)]', 1, true), 'en item missed the source marker: ' .. list.items[1].text)
+  assert(
+    list.items[4].text:find('display', 1, true) == nil,
+    'zh-CN item wrongly claims display: ' .. list.items[4].text
+  )
+end
 select_qf(4)
 assert(
   vim.api.nvim_buf_get_name(0):find('zh-CN.json', 1, true),
