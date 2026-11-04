@@ -1,6 +1,6 @@
 # x18n.nvim
 
-> [!NOTE]
+> [!WARNING]
 > This project is under active development. Commands, options and the Lua API
 > may change between releases.
 
