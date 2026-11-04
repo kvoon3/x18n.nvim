@@ -46,9 +46,12 @@ assert(picked == 0, 'single usage opened the picker')
 -- Several hits: the app subtree in en.json gathers usages of every child key.
 vim.cmd('edit ' .. ctx.playground .. '/locales/en.json')
 vim.cmd 'filetype detect'
-assert(ctx.wait_for(function()
-  return vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf(), name = 'x18n' })[1] ~= nil
-end, 8000), 'server did not attach to en.json')
+assert(
+  ctx.wait_for(function()
+    return vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf(), name = 'x18n' })[1] ~= nil
+  end, 8000),
+  'server did not attach to en.json'
+)
 assert(cursor_onto(vim.api.nvim_get_current_buf(), 'app'), 'en.json lost the app parent')
 
 local items
@@ -73,11 +76,14 @@ assert(vim.api.nvim_win_get_cursor(0)[1] == 11, 'usage jump landed on line ' .. 
 vim.cmd('edit ' .. ctx.playground .. '/locales/en.json')
 vim.cmd 'filetype detect'
 local lbuf = vim.api.nvim_get_current_buf()
-assert(ctx.wait_for(function()
-  return vim.lsp.get_clients({ bufnr = lbuf, name = 'x18n' })[1] ~= nil
-end, 8000), 'server did not attach to en.json for the single-hit check')
+assert(
+  ctx.wait_for(function()
+    return vim.lsp.get_clients({ bufnr = lbuf, name = 'x18n' })[1] ~= nil
+  end, 8000),
+  'server did not attach to en.json for the single-hit check'
+)
 assert(cursor_onto(lbuf, 'title'), 'en.json lost the title leaf')
 assert(usages.jump_under_cursor() == true, 'single locale-file usage did not jump')
 assert(vim.api.nvim_buf_get_name(0):find('src/main.js', 1, true), 'single-hit jump left the code file')
 assert(vim.api.nvim_win_get_cursor(0)[1] == 11, 'single-hit jump landed on line ' .. vim.api.nvim_win_get_cursor(0)[1])
-print('usages ok')
+print 'usages ok'

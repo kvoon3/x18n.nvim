@@ -44,4 +44,4 @@ vim.cmd 'X18nToggleLocaleFileEol'
 assert(decorations.locale_file_eol() == false, 'ToggleLocaleFileEol did not turn off')
 vim.cmd 'X18nToggleLocaleFileEol'
 assert(decorations.locale_file_eol() == true, 'ToggleLocaleFileEol did not turn on')
-print('commands ok')
+print 'commands ok'

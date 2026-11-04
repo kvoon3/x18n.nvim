@@ -1,8 +1,6 @@
 -- Root detection: an x18n config anywhere upward wins, otherwise the nearest
 -- ancestor holding any marker. Native vim.fs.root applies markers in list order,
 -- so a repo-root package.json used to shadow a closer composer.json.
-local ctx = ...
-
 local lsp = require 'x18n.lsp'
 local scratch = vim.fn.tempname()
 vim.fn.mkdir(scratch .. '/repo/app/sub/src', 'p')
@@ -38,4 +36,4 @@ assert(
   'root package.json shadowed the closer composer.json'
 )
 assert(resolve(scratch .. '/empty/src/code.js') == nil, 'a marker-less tree produced a root')
-print('root ok')
+print 'root ok'

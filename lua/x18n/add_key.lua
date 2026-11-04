@@ -24,16 +24,20 @@ local function write(writes, key, project)
     if i > #writes then
       --[[ The edits are staged in modified buffers (workspace/applyEdit), like
         extract; saving is the user's review step. ]]
-      return require('x18n').notify(("added %s to %d locale(s) — unsaved buffers, review and save"):format(key, #writes))
+      return require('x18n').notify(
+        ('added %s to %d locale(s) — unsaved buffers, review and save'):format(key, #writes)
+      )
     end
     client:request('workspace/executeCommand', {
       command = 'x18n.set',
-      arguments = { {
-        project = project,
-        key = key,
-        locale = writes[i].locale,
-        value = writes[i].value,
-      } },
+      arguments = {
+        {
+          project = project,
+          key = key,
+          locale = writes[i].locale,
+          value = writes[i].value,
+        },
+      },
     }, function(err)
       if err then
         return require('x18n').notify(err.message, vim.log.levels.WARN)
@@ -63,7 +67,9 @@ local function resolve_key(key_arg)
     end
     done = true
   end)
-  vim.wait(2000, function() return done end, 50)
+  vim.wait(2000, function()
+    return done
+  end, 50)
   return key, project
 end
 
@@ -90,7 +96,9 @@ local function is_undefined(key, project)
     end
     done = true
   end)
-  vim.wait(2000, function() return done end, 50)
+  vim.wait(2000, function()
+    return done
+  end, 50)
   return found
 end
 
@@ -117,7 +125,9 @@ local function key_exists(key, project)
     end
     done = true
   end)
-  vim.wait(2000, function() return done end, 50)
+  vim.wait(2000, function()
+    return done
+  end, 50)
   return found
 end
 
@@ -137,7 +147,9 @@ function M.add_one(key, locale)
       result = not err and res or nil
       done = true
     end)
-    vim.wait(2000, function() return done end, 25)
+    vim.wait(2000, function()
+      return done
+    end, 25)
     if result and result.key == key then
       project = result.project
     end
@@ -160,7 +172,7 @@ function M.run(key_arg)
   end
   local key, project = resolve_key(key_arg)
   if not key then
-    return init.notify('no i18n key under the cursor')
+    return init.notify 'no i18n key under the cursor'
   end
   --[[ Two gates: the cursor flow only writes keys code already uses but nothing
     defines; an explicit key only needs to be absent from the tree. ]]

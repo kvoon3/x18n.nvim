@@ -5,10 +5,13 @@
 local ctx = ...
 
 -- The schedule needs one event-loop pass after attach.
-assert(ctx.wait_for(function()
-  local m = vim.fn.maparg('gh', 'n', false, true)
-  return m ~= nil and m.callback ~= nil
-end, 5000), 'gh not bound on x18n buffers')
+assert(
+  ctx.wait_for(function()
+    local m = vim.fn.maparg('gh', 'n', false, true)
+    return m ~= nil and m.callback ~= nil
+  end, 5000),
+  'gh not bound on x18n buffers'
+)
 
 -- On the key.
 vim.api.nvim_win_set_cursor(0, { 11, 30 })
@@ -26,9 +29,12 @@ local function hover_buf()
     return vim.api.nvim_win_get_buf(win)
   end
 end
-assert(ctx.wait_for(function()
-  return hover_buf() ~= nil
-end, 5000), 'popup never opened from gh')
+assert(
+  ctx.wait_for(function()
+    return hover_buf() ~= nil
+  end, 5000),
+  'popup never opened from gh'
+)
 local first = vim.api.nvim_buf_get_lines(hover_buf(), 0, 1, false)[1]
 assert(first:find('app%.title', 1, false), 'popup missing key: ' .. first)
 close_hover()
@@ -62,9 +68,12 @@ assert(maps.desc and maps.desc:find('x18n', 1, true), 're-chain did not reclaim 
 -- On a key again after the clobber: popup, not hover.
 vim.api.nvim_win_set_cursor(0, { 11, 30 })
 maps.callback()
-assert(ctx.wait_for(function()
-  return hover_buf() ~= nil
-end, 5000), 'popup did not survive the clobber')
+assert(
+  ctx.wait_for(function()
+    return hover_buf() ~= nil
+  end, 5000),
+  'popup did not survive the clobber'
+)
 close_hover()
 
 -- Off a key after the clobber: exactly one hover call, no chain stacking.
@@ -73,4 +82,4 @@ maps = vim.fn.maparg('gh', 'n', false, true)
 maps.callback()
 vim.lsp.buf.hover = orig_hover2
 assert(#hovered == 1, 'fallback chained twice after clobber: ' .. #hovered)
-print('gh ok')
+print 'gh ok'

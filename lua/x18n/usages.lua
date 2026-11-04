@@ -33,7 +33,9 @@ function M.jump_under_cursor()
     err, locations = request_err, result
     done = true
   end)
-  vim.wait(2000, function() return done end, 25)
+  vim.wait(2000, function()
+    return done
+  end, 25)
   if not done then
     return false
   end
@@ -54,7 +56,9 @@ function M.jump_under_cursor()
       end
       checked = true
     end)
-    vim.wait(2000, function() return checked end, 25)
+    vim.wait(2000, function()
+      return checked
+    end, 25)
     if not key then
       if (init.config.usage or {}).notify_no_key ~= false then
         init.notify 'no i18n key under the cursor'

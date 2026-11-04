@@ -14,6 +14,9 @@ primary surface on every playground stack.
 - `inline-multi` renders two or more usages on one line without shifting the
   surrounding template text.
 - `inline-dynamic` keeps the raw expression and appends `→ dynamic`.
+- `inline-params` fills simple message placeholders from static call params:
+  `$t('app.greeting', { name: user })` with `const user = 'Ada'` renders
+  `Hello Ada!`. Formatted, plural and unresolved params stay as written.
 - `inline-missing` keeps the raw key and shows either `→ missing` or the server's
   missing-key diagnostic (the arrow yields to the diagnostic).
 - `inline-cross-check` verifies one rendered value per file/locale with the CLI's
@@ -40,7 +43,9 @@ Preconditions:
   `src/App.vue` passes 7 screen lines per locale; the evidence
   `screens/vue-vite__src_App_vue__en.txt` contains
   `RAW document.title = t('app.title')`,
-  `SCREEN document.title = t(Playground)`, and `RESULT PASS`.
+  `SCREEN document.title = t(Playground)`, and `RESULT PASS`. Its greeting
+  line reads `SCREEN <h1>{{ $t(Hello Ada!, { name: user }) }}</h1>`, with
+  `const user = 'Ada'` resolved from `<script setup>`.
   `src/components/TodoList.vue` passes 4 lines per locale (including the
   `<i18n>` block's `local.hint`), and `src/main.ts` passes its two-usage ternary.
 - **React matrix.** Drive `react-i18next`. Run
@@ -85,9 +90,13 @@ Preconditions:
 - A component with an embedded `<i18n>` block (vue-vite
   `src/components/TodoList.vue`) is code first: its `t()` usages are decorated.
   The block's own keys are resources and are not rendered inline.
-- Interpolated and plural values are literal strings: `t(Welcome, {{name}}, ...)`,
-  `t(No tasks | One task | {n} tasks, ...)` and `t(Hello %{name}, ...)` are the
-  expected rendering, not unresolved placeholders.
+- Static string params fill simple placeholders before rendering:
+  `$t('app.greeting', { name: user })` with `const user = 'Ada'` shows
+  `Hello Ada!` in en and `こんにちは Ada` in ja. A param the scanner cannot
+  resolve stays as written. Formatted and plural arguments such as
+  `{count, plural, ...}` keep their text, and a placeholder with no matching
+  param stays literal, so `t(No tasks | One task | {n} tasks, ...)` is still
+  the expected rendering when the call has no static `n`.
 - Conceal always reveals the cursor line. The checker moves the cursor to a line
   without decorations; a one-line file gets a scratch blank line so its usage can
   be checked off-cursor.

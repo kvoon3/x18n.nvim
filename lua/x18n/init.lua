@@ -89,9 +89,9 @@ end
 ---@return vim.lsp.Client?
 function M.client(bufnr)
   bufnr = (bufnr == nil or bufnr == 0) and vim.api.nvim_get_current_buf() or bufnr
-  local clients = vim.lsp.get_clients({ bufnr = bufnr, name = 'x18n' })
+  local clients = vim.lsp.get_clients { bufnr = bufnr, name = 'x18n' }
   if #clients == 0 then
-    clients = vim.lsp.get_clients({ name = 'x18n' })
+    clients = vim.lsp.get_clients { name = 'x18n' }
   end
   return clients[1]
 end
@@ -130,7 +130,7 @@ function M.setup(opts)
           require('x18n.lsp').apply_diagnostics(client)
         end
         vim.schedule(function()
-          if #vim.lsp.get_clients({ bufnr = a.buf, name = 'x18n' }) > 0 then
+          if #vim.lsp.get_clients { bufnr = a.buf, name = 'x18n' } > 0 then
             require('x18n.actions').default_keymaps(a.buf)
           end
         end)

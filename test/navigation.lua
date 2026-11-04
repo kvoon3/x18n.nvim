@@ -5,7 +5,7 @@ local util = require 'x18n.util'
 
 local location
 local done = false
-require('x18n').get_client():request('workspace/symbol', { query = 'app.title' }, function(err, result)
+require('x18n').get_client():request('workspace/symbol', { query = 'app.title' }, function(_, result)
   for _, sym in ipairs(result or {}) do
     if sym.name == 'app.title' then
       location = sym.location
@@ -14,7 +14,9 @@ require('x18n').get_client():request('workspace/symbol', { query = 'app.title' }
   end
   done = true
 end)
-vim.wait(5000, function() return done end, 50)
+vim.wait(5000, function()
+  return done
+end, 50)
 assert(location, 'workspace/symbol did not return app.title')
 
 local main = ctx.playground .. '/src/main.js'
@@ -52,4 +54,4 @@ back_to_code()
 assert(util.jump(location, 'not-a-command'), 'invalid open_cmd jump failed')
 assert(#vim.api.nvim_list_wins() == 1, 'invalid open_cmd opened a window')
 assert(vim.api.nvim_buf_get_name(0):find('en.json', 1, true), 'invalid open_cmd did not edit')
-print('navigation ok')
+print 'navigation ok'

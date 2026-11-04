@@ -15,7 +15,7 @@ local function cursor_onto(pattern)
   return false
 end
 
-assert(cursor_onto('app%.missing%.key'), 'fixture lost the missing-key call')
+assert(cursor_onto 'app%.missing%.key', 'fixture lost the missing-key call')
 
 local actions, wanted
 vim.ui.select = function(items, opts, on_choice)
@@ -35,7 +35,7 @@ vim.ui.select = function(items, opts, on_choice)
 end
 local answers = { en = 'Source title', fr = 'Titre ajouté' }
 vim.ui.input = function(opts, on_choice)
-  local locale = opts.prompt:match('%[([%w-]+)%]')
+  local locale = opts.prompt:match '%[([%w-]+)%]'
   on_choice(answers[locale] or '')
 end
 
@@ -44,7 +44,12 @@ local function menu()
   local map = vim.fn.maparg('<C-.>', 'n', false, true)
   assert(map and map.callback, 'Ctrl+. not bound on x18n buffers')
   map.callback()
-  assert(ctx.wait_for(function() return actions ~= nil end, 5000), 'code action menu never opened')
+  assert(
+    ctx.wait_for(function()
+      return actions ~= nil
+    end, 5000),
+    'code action menu never opened'
+  )
   local titles = {}
   for _, item in ipairs(actions) do
     titles[#titles + 1] = item.title
@@ -60,22 +65,30 @@ end
 -- The source is missing: all four locales are offered.
 wanted = 'Add "app.missing.key" to en'
 local first = menu()
-for _, locale in ipairs({ 'en', 'fr', 'ja', 'zh-CN' }) do
+for _, locale in ipairs { 'en', 'fr', 'ja', 'zh-CN' } do
   assert(first:find('Add "app.missing.key" to ' .. locale, 1, true), 'missing action for ' .. locale .. ': ' .. first)
 end
 assert(not first:find('Add empty values in', 1, true), 'empty-value action leaked: ' .. first)
-assert(ctx.wait_for(function() return key_lines('en'):find('Source title', 1, true) end, 8000), 'en.json never received the code action value')
+assert(
+  ctx.wait_for(function()
+    return key_lines('en'):find('Source title', 1, true)
+  end, 8000),
+  'en.json never received the code action value'
+)
 
 -- The code usage has no diagnostic now, but the plugin still lists the three
 -- remaining locales instead of disappearing. The server index updates after the
 -- edit, so retry until the en action drops out.
 wanted = nil
 local second
-assert(ctx.wait_for(function()
-  second = menu()
-  return not second:find('Add "app.missing.key" to en', 1, true)
-end, 8000), 'en action stayed after the key was added: ' .. tostring(second))
-for _, locale in ipairs({ 'fr', 'ja', 'zh-CN' }) do
+assert(
+  ctx.wait_for(function()
+    second = menu()
+    return not second:find('Add "app.missing.key" to en', 1, true)
+  end, 8000),
+  'en action stayed after the key was added: ' .. tostring(second)
+)
+for _, locale in ipairs { 'fr', 'ja', 'zh-CN' } do
   assert(second:find('Add "app.missing.key" to ' .. locale, 1, true), 'missing action for ' .. locale .. ': ' .. second)
 end
 assert(not second:find('Add empty values in', 1, true), 'empty-value action leaked: ' .. second)
@@ -84,21 +97,29 @@ assert(not second:find('Add empty values in', 1, true), 'empty-value action leak
 vim.cmd('edit ' .. ctx.playground .. '/locales/en.json')
 vim.cmd 'filetype detect'
 local enbuf = vim.api.nvim_get_current_buf()
-assert(ctx.wait_for(function()
-  return vim.diagnostic.get(enbuf, { code = 'missing-translation' })[1] ~= nil
-end, 8000), 'en.json warning never arrived')
+assert(
+  ctx.wait_for(function()
+    return vim.diagnostic.get(enbuf, { code = 'missing-translation' })[1] ~= nil
+  end, 8000),
+  'en.json warning never arrived'
+)
 local warning = vim.diagnostic.get(enbuf, { code = 'missing-translation' })[1]
 vim.api.nvim_win_set_cursor(0, { warning.lnum + 1, warning.col })
 wanted = 'Add "app.missing.key" to fr'
 local third = menu()
-for _, locale in ipairs({ 'fr', 'ja', 'zh-CN' }) do
+for _, locale in ipairs { 'fr', 'ja', 'zh-CN' } do
   assert(third:find('Add "app.missing.key" to ' .. locale, 1, true), 'warning action for ' .. locale .. ': ' .. third)
 end
-assert(ctx.wait_for(function() return key_lines('fr'):find('Titre ajouté', 1, true) end, 8000), 'fr.json never received the code action value')
+assert(
+  ctx.wait_for(function()
+    return key_lines('fr'):find('Titre ajouté', 1, true)
+  end, 8000),
+  'fr.json never received the code action value'
+)
 
-for _, code in ipairs({ 'ja', 'zh-CN' }) do
+for _, code in ipairs { 'ja', 'zh-CN' } do
   local text = key_lines(code)
   assert(not text:find('missing', 1, true), code .. ' was auto-filled with the key')
   assert(not text:find('Titre ajouté', 1, true), code .. ' was auto-filled with the value')
 end
-print('code action ok')
+print 'code action ok'

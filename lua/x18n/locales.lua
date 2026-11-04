@@ -39,7 +39,9 @@ function M.projects(force)
     info = err and nil or result
     done = true
   end)
-  vim.wait(2000, function() return done end, 50)
+  vim.wait(2000, function()
+    return done
+  end, 50)
   return info
 end
 

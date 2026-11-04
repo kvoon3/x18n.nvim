@@ -23,7 +23,7 @@ vim.fn.mkdir(playground_fixture, 'p')
 --[[ macOS /tmp and /var are symlinks; the server reports realpaths, so pin the
   fixture root to one. Tests compare item data roots against ctx.playground. ]]
 playground_fixture = vim.uv.fs_realpath(playground_fixture) or playground_fixture
-local copied = vim.fn.system({ 'rsync', '-a', fixture .. '/', playground_fixture .. '/' })
+local copied = vim.fn.system { 'rsync', '-a', fixture .. '/', playground_fixture .. '/' }
 assert(vim.v.shell_error == 0, 'fixture copy failed: ' .. copied)
 vim.api.nvim_create_autocmd('VimLeavePre', {
   callback = function()
@@ -53,7 +53,9 @@ local function wait_for(cond, timeout_ms)
     if cond() then
       return true
     end
-    vim.wait(100, function() return cond() end, 50)
+    vim.wait(100, function()
+      return cond()
+    end, 50)
     vim.cmd 'redraw'
   end
   return cond()
@@ -78,9 +80,9 @@ if not decorations_disabled then
 end
 
 local chunk = assert(loadfile(script))
-chunk({
+chunk {
   playground = playground_fixture,
   wait_for = wait_for,
   buf = vim.api.nvim_get_current_buf(),
-})
+}
 vim.cmd 'qa!'

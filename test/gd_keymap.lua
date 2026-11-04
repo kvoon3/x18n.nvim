@@ -5,7 +5,7 @@ local ctx = ...
 local actions = require 'x18n.actions'
 
 local function qf()
-  return vim.fn.getqflist({ title = 1, items = 1 })
+  return vim.fn.getqflist { title = 1, items = 1 }
 end
 
 local function close_qf()
@@ -17,10 +17,13 @@ local function select_qf(index)
   close_qf()
 end
 
-assert(ctx.wait_for(function()
-  local map = vim.fn.maparg('gd', 'n', false, true)
-  return map ~= nil and map.callback ~= nil
-end, 5000), 'gd not bound on x18n buffers')
+assert(
+  ctx.wait_for(function()
+    local map = vim.fn.maparg('gd', 'n', false, true)
+    return map ~= nil and map.callback ~= nil
+  end, 5000),
+  'gd not bound on x18n buffers'
+)
 local map = vim.fn.maparg('gd', 'n', false, true)
 assert(map.desc and map.desc:find('x18n', 1, true), 'gd desc: ' .. tostring(map.desc))
 
@@ -60,7 +63,10 @@ map.callback()
 list = qf()
 assert(#list.items == 4, 'gd did not list after the clobber: ' .. #list.items)
 select_qf(2)
-assert(vim.api.nvim_buf_get_name(0):find('fr.json', 1, true), 'gd did not jump after the clobber: ' .. vim.api.nvim_buf_get_name(0))
+assert(
+  vim.api.nvim_buf_get_name(0):find('fr.json', 1, true),
+  'gd did not jump after the clobber: ' .. vim.api.nvim_buf_get_name(0)
+)
 
 vim.cmd('edit ' .. ctx.playground .. '/src/main.js')
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
@@ -72,4 +78,4 @@ map = vim.fn.maparg('gd', 'n', false, true)
 map.callback()
 vim.lsp.buf.definition = original
 assert(defined == 1, 'gd fallback chained twice after clobber: ' .. defined)
-print('gd keymap ok')
+print 'gd keymap ok'

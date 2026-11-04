@@ -100,7 +100,7 @@ function M.format(lines)
       end
     elseif line:match '^%*%*x18n%**' then
       --[[ Title line like **x18n** `app.title` -> "x18n app.title". ]]
-      local key = line:match('`([^`]+)`')
+      local key = line:match '`([^`]+)`'
       out[#out + 1] = 'x18n ' .. (key or line:gsub('[%*`]', ''))
     elseif line:match '^%d+ usage' then
       --[[ The command links are dead text in a scratch buffer; name the

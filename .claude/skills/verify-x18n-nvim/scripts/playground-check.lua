@@ -30,7 +30,7 @@ assert(entry, 'playground "' .. project_name .. '" is not in scripts/playgrounds
 
 vim.opt.runtimepath:prepend(repo)
 vim.notify = function() end
-vim.diagnostic.config({ virtual_text = false, signs = false, underline = false })
+vim.diagnostic.config { virtual_text = false, signs = false, underline = false }
 require('x18n').setup {
   lsp = {
     cmd = { 'node', repo .. '/node_modules/.bin/x18n-lsp', '--stdio' },
@@ -87,7 +87,9 @@ local function request(client, method, params, ms)
     result = r
     answered = true
   end)
-  vim.wait(ms or 5000, function() return answered end, 25)
+  vim.wait(ms or 5000, function()
+    return answered
+  end, 25)
   if not answered then
     return nil, 'no answer to ' .. method
   end
@@ -117,7 +119,7 @@ local function quoted_range(bufnr, range)
   local line = vim.api.nvim_buf_get_lines(bufnr, s_line, s_line + 1, false)[1] or ''
   local before = line:sub(s_col, s_col)
   local after = line:sub(e_col + 1, e_col + 1)
-  if before:match "['\"`]" and after:match "['\"`]" then
+  if before:match '[\'"`]' and after:match '[\'"`]' then
     s_col = s_col - 1
     e_col = e_col + 1
   end
@@ -155,7 +157,14 @@ local function expected_lines(bufnr, decorations)
       local _, s_col, _, e_col = quoted_range(bufnr, d.range)
       local op
       if d.state == 'ok' and d.value and d.value ~= '' then
-        op = { col = s_col, end_col = e_col, text = d.value, key = d.key, state = d.state, feature = 'inline-translations,display-locale' }
+        op = {
+          col = s_col,
+          end_col = e_col,
+          text = d.value,
+          key = d.key,
+          state = d.state,
+          feature = 'inline-translations,display-locale',
+        }
       else
         local expression = d.expression or d.range
         local _, x_col = util.to_byte(bufnr, expression['end'])
@@ -225,13 +234,15 @@ local function locale_codes(project)
 end
 
 local function cli_status(root)
-  local result = vim.system({
-    repo .. '/node_modules/.bin/x18n',
-    'status',
-    '--root',
-    root,
-    '--json',
-  }, { text = true }):wait(20000)
+  local result = vim
+    .system({
+      repo .. '/node_modules/.bin/x18n',
+      'status',
+      '--root',
+      root,
+      '--json',
+    }, { text = true })
+    :wait(20000)
   if result.code ~= 0 then
     return nil, (result.stderr or ''):gsub('%s+$', '')
   end
@@ -255,14 +266,16 @@ end
 --- server's decorations reply. Nil + reason means the cross-check could not
 --- run; a value mismatch is a real failure.
 local function cli_value(root, key, locale)
-  local result = vim.system({
-    repo .. '/node_modules/.bin/x18n',
-    'get',
-    key,
-    '--root',
-    root,
-    '--json',
-  }, { text = true }):wait(20000)
+  local result = vim
+    .system({
+      repo .. '/node_modules/.bin/x18n',
+      'get',
+      key,
+      '--root',
+      root,
+      '--json',
+    }, { text = true })
+    :wait(20000)
   if result.code ~= 0 then
     return nil, (result.stderr or ''):gsub('%s+$', '')
   end
@@ -302,7 +315,7 @@ local function verify_file(relative)
   local filetype = vim.bo[bufnr].filetype
 
   local attached = wait_for(function()
-    return #vim.lsp.get_clients({ bufnr = bufnr, name = 'x18n' }) > 0
+    return #vim.lsp.get_clients { bufnr = bufnr, name = 'x18n' } > 0
   end, 10000)
   if not attached then
     local supported = table.concat(require('x18n').config.lsp.filetypes or {}, ', ')
@@ -315,9 +328,11 @@ local function verify_file(relative)
   local namespace = require('x18n.decorations').namespace()
   local uri = vim.uri_from_bufnr(bufnr)
 
-  if not wait_for(function()
-    return #vim.api.nvim_buf_get_extmarks(bufnr, namespace, 0, -1, {}) > 0
-  end, 10000) then
+  if
+    not wait_for(function()
+      return #vim.api.nvim_buf_get_extmarks(bufnr, namespace, 0, -1, {}) > 0
+    end, 10000)
+  then
     local decorations = request(client, 'x18n/decorations', { uri = uri })
     local message = ('no decorations rendered; filetype=%s; server decorations=%d'):format(
       filetype,
@@ -395,10 +410,12 @@ local function verify_file(relative)
   for _, code in ipairs(locales) do
     require('x18n.actions').set_display_locale(code)
     local decorations
-    if not wait_for(function()
-      decorations = request(client, 'x18n/decorations', { uri = uri })
-      return decorations ~= nil and decorations.locale == code
-    end, 8000) then
+    if
+      not wait_for(function()
+        decorations = request(client, 'x18n/decorations', { uri = uri })
+        return decorations ~= nil and decorations.locale == code
+      end, 8000)
+    then
       fail('display-locale', relative, code, 'server did not switch to ' .. code)
     else
       local expected, ops_by_line = expected_lines(bufnr, decorations.decorations)
@@ -558,12 +575,12 @@ local function main()
   vim.fn.mkdir(out_dir .. '/screens', 'p')
   local project_dir = tmp_root .. '/' .. project_name
   vim.fn.mkdir(project_dir, 'p')
-  local copied = vim.fn.system({
+  local copied = vim.fn.system {
     'rsync',
     '-a',
     repo .. '/playground/' .. project_name .. '/',
     project_dir .. '/',
-  })
+  }
   if vim.v.shell_error ~= 0 then
     fail('inline-translations', '-', '-', 'project copy failed: ' .. copied)
     return

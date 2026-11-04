@@ -20,9 +20,12 @@ end
 
 -- The fixture starts with app.missing.key absent from en: the server reports
 -- missing-key on the usage and there is nothing to mirror yet.
-assert(ctx.wait_for(function()
-  return has_code(ctx.buf, 'missing-key')
-end, 8000), 'missing-key error never arrived')
+assert(
+  ctx.wait_for(function()
+    return has_code(ctx.buf, 'missing-key')
+  end, 8000),
+  'missing-key error never arrived'
+)
 assert(#mirrored() == 0, 'mirror fired before the key existed in the source')
 
 -- Add the key to en only. The code error clears, and the target-locale warning
@@ -33,7 +36,7 @@ local en = vim.api.nvim_get_current_buf()
 local original = vim.api.nvim_buf_get_lines(en, 0, -1, false)
 local lines = vim.deepcopy(original)
 for i, line in ipairs(lines) do
-  if line:find('"description"', 1, true) then
+  if line:find('"greeting"', 1, true) then
     lines[i] = line .. ','
     table.insert(lines, i + 1, '    "missing": {')
     table.insert(lines, i + 2, '      "key": "Source title"')
@@ -46,20 +49,26 @@ vim.api.nvim_buf_set_lines(en, 0, -1, false, lines)
 local function code_of(d)
   return tostring(d.code)
 end
-assert(ctx.wait_for(function()
-  return not has_code(ctx.buf, 'missing-key')
-end, 8000), 'missing-key error stayed after adding the source value: '
-  .. vim.inspect(vim.tbl_map(code_of, vim.diagnostic.get(ctx.buf))))
-assert(ctx.wait_for(function()
-  local d = mirrored()[1]
-  return d and d.severity == WARN and d.code == 'missing-translation'
-end, 8000), 'mirrored warning never reached the code usage')
+assert(
+  ctx.wait_for(function()
+    return not has_code(ctx.buf, 'missing-key')
+  end, 8000),
+  'missing-key error stayed after adding the source value: '
+    .. vim.inspect(vim.tbl_map(code_of, vim.diagnostic.get(ctx.buf)))
+)
+assert(
+  ctx.wait_for(function()
+    local d = mirrored()[1]
+    return d and d.severity == WARN and d.code == 'missing-translation'
+  end, 8000),
+  'mirrored warning never reached the code usage'
+)
 
 local warning = mirrored()[1]
 assert(#mirrored() == 1, 'expected one mirrored warning, got ' .. #mirrored())
 assert(warning.lnum == 11, 'mirror landed on the wrong line: ' .. (warning.lnum + 1))
 assert(warning.col > 20, 'mirror landed on the wrong column: ' .. warning.col)
-for _, locale in ipairs({ 'fr', 'ja', 'zh-CN' }) do
+for _, locale in ipairs { 'fr', 'ja', 'zh-CN' } do
   assert(warning.message:find(locale, 1, true), 'mirror lost locale ' .. locale .. ': ' .. warning.message)
 end
 assert(warning.message:find('app.missing.key', 1, true), 'mirror lost the key: ' .. warning.message)
@@ -75,7 +84,10 @@ assert(source_warning and source_warning.severity == WARN, 'server warning missi
 
 -- Removing the source key restores the error and clears the mirror.
 vim.api.nvim_buf_set_lines(en, 0, -1, false, original)
-assert(ctx.wait_for(function()
-  return has_code(ctx.buf, 'missing-key') and #mirrored() == 0
-end, 8000), 'mirror did not clear after removing the source key')
-print('missing-translation mirror ok')
+assert(
+  ctx.wait_for(function()
+    return has_code(ctx.buf, 'missing-key') and #mirrored() == 0
+  end, 8000),
+  'mirror did not clear after removing the source key'
+)
+print 'missing-translation mirror ok'

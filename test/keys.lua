@@ -29,44 +29,75 @@ end
 -- Copy key.
 vim.fn.setreg('+', '')
 keys.pick 'copy_key'
-assert(ctx.wait_for(function() return vim.fn.getreg '+' == 'app.title' end, 5000), 'copy_key failed')
+assert(
+  ctx.wait_for(function()
+    return vim.fn.getreg '+' == 'app.title'
+  end, 5000),
+  'copy_key failed'
+)
 
 -- Copy the display-locale translation (en is the source and default).
 vim.fn.setreg('+', '')
 keys.pick 'copy_translation'
-assert(ctx.wait_for(function() return vim.fn.getreg '+' == 'Hello x18n' end, 8000), 'copy_translation failed: ' .. vim.fn.getreg '+')
+assert(
+  ctx.wait_for(function()
+    return vim.fn.getreg '+' == 'Hello x18n'
+  end, 8000),
+  'copy_translation failed: ' .. vim.fn.getreg '+'
+)
 
 -- A non-source display locale goes through the structured hover path.
 actions.set_display_locale 'ja'
-assert(ctx.wait_for(function() return require('x18n.locales').display_locale() == 'ja' end, 3000), 'display locale did not switch to ja')
+assert(
+  ctx.wait_for(function()
+    return require('x18n.locales').display_locale() == 'ja'
+  end, 3000),
+  'display locale did not switch to ja'
+)
 vim.fn.setreg('+', '')
 keys.pick 'copy_translation'
-assert(ctx.wait_for(function() return vim.fn.getreg '+' == 'こんにちは x18n' end, 8000), 'copy_translation ignored ja: ' .. vim.fn.getreg '+')
+assert(
+  ctx.wait_for(function()
+    return vim.fn.getreg '+' == 'こんにちは x18n'
+  end, 8000),
+  'copy_translation ignored ja: ' .. vim.fn.getreg '+'
+)
 actions.set_display_locale 'en'
-assert(ctx.wait_for(function() return require('x18n.locales').display_locale() == 'en' end, 3000), 'display locale did not switch back to en')
+assert(
+  ctx.wait_for(function()
+    return require('x18n.locales').display_locale() == 'en'
+  end, 3000),
+  'display locale did not switch back to en'
+)
 
 -- Jump uses the display-locale definition.
 vim.cmd 'enew'
 keys.pick 'jump'
-assert(ctx.wait_for(function()
-  return vim.api.nvim_buf_get_name(0):find('locales' .. '/' .. 'en%.json')
-end, 8000), 'jump did not open en.json: ' .. vim.api.nvim_buf_get_name(0))
+assert(
+  ctx.wait_for(function()
+    return vim.api.nvim_buf_get_name(0):find('locales' .. '/' .. 'en%.json')
+  end, 8000),
+  'jump did not open en.json: ' .. vim.api.nvim_buf_get_name(0)
+)
 assert(vim.api.nvim_get_current_line():find('title', 1, true), 'cursor not on the title key')
 
 -- Choose-locale opens a second picker and lands in that locale's file.
 only()
 local before = #selects
 keys.pick 'choose_locale'
-assert(ctx.wait_for(function()
-  return vim.api.nvim_buf_get_name(0):find('ja.json', 1, true)
-end, 8000), 'choose_locale did not open ja.json: ' .. vim.api.nvim_buf_get_name(0))
+assert(
+  ctx.wait_for(function()
+    return vim.api.nvim_buf_get_name(0):find('ja.json', 1, true)
+  end, 8000),
+  'choose_locale did not open ja.json: ' .. vim.api.nvim_buf_get_name(0)
+)
 assert(#selects == before + 2, 'choose_locale did not open a locale picker')
 assert(selects[#selects].items[1].code ~= nil, 'second picker did not list locales')
 local offered = {}
 for _, item in ipairs(selects[#selects].items) do
   offered[item.code] = true
 end
-for _, code in ipairs({ 'en', 'zh-CN', 'ja', 'fr' }) do
+for _, code in ipairs { 'en', 'zh-CN', 'ja', 'fr' } do
   assert(offered[code], 'locale picker lost ' .. code)
 end
 assert(vim.api.nvim_get_current_line():find('title', 1, true), 'choose_locale missed the key')
@@ -74,9 +105,12 @@ assert(vim.api.nvim_get_current_line():find('title', 1, true), 'choose_locale mi
 -- Split opens a second window on the display-locale definition.
 only()
 keys.pick 'split'
-assert(ctx.wait_for(function()
-  return #vim.api.nvim_list_wins() == 2
-end, 8000), 'split action did not open a window')
+assert(
+  ctx.wait_for(function()
+    return #vim.api.nvim_list_wins() == 2
+  end, 8000),
+  'split action did not open a window'
+)
 assert(vim.api.nvim_buf_get_name(0):find('en.json', 1, true), 'split landed in the wrong buffer')
 
 -- Upstream servers have no structured hover; copy falls back to the symbol's
@@ -89,6 +123,11 @@ locales.hover_value = function(_, _, _, on_result)
 end
 vim.fn.setreg('+', '')
 keys.pick 'copy_translation'
-assert(ctx.wait_for(function() return vim.fn.getreg '+' == 'Hello x18n' end, 5000), 'copy_translation did not fall back to the source value')
+assert(
+  ctx.wait_for(function()
+    return vim.fn.getreg '+' == 'Hello x18n'
+  end, 5000),
+  'copy_translation did not fall back to the source value'
+)
 locales.hover_value = original_hover
-print('keys ok')
+print 'keys ok'

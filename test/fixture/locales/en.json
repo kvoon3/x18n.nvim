@@ -1,6 +1,7 @@
 {
   "app": {
     "title": "Hello x18n",
-    "description": "A playground for x18n.nvim"
+    "description": "A playground for x18n.nvim",
+    "greeting": "Hello {name}"
   }
 }

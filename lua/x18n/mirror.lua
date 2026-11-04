@@ -103,7 +103,7 @@ function M.observe(client_id, uri, diagnostics)
     if d.code == 'missing-translation' then
       local key = d.data and d.data.key
       if not key and type(d.message) == 'string' then
-        key = d.message:match('^"(.-)" is missing in ')
+        key = d.message:match '^"(.-)" is missing in '
       end
       if key then
         keys[key] = d.message
@@ -113,9 +113,14 @@ function M.observe(client_id, uri, diagnostics)
   missing[client_id] = missing[client_id] or {}
   missing[client_id][uri] = next(keys) and keys or nil
   if vim.g.x18n_debug then
-    require('x18n').debug(('mirror observe client=%s uri=%s keys=%s cached=%s'):format(
-      tostring(client_id), vim.fn.fnamemodify(vim.uri_to_fname(uri), ':t'), vim.tbl_count(keys), vim.tbl_count(cache)
-    ))
+    require('x18n').debug(
+      ('mirror observe client=%s uri=%s keys=%s cached=%s'):format(
+        tostring(client_id),
+        vim.fn.fnamemodify(vim.uri_to_fname(uri), ':t'),
+        vim.tbl_count(keys),
+        vim.tbl_count(cache)
+      )
+    )
   end
   for bufnr in pairs(cache) do
     apply(bufnr)

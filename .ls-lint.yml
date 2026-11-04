@@ -1,0 +1,24 @@
+ls:
+  .dir: kebab-case
+  .lua: snake_case
+  .md: kebab-case
+  .sh: kebab-case
+  .json: kebab-case
+  .yml: kebab-case
+  .yaml: kebab-case
+  .toml: kebab-case
+
+ignore:
+  - .audit
+  - .claude
+  - .git
+  - node_modules
+  - playground
+  - test/fixture
+  - LICENSE
+  - README.md
+  - .gitignore
+  - .ls-lint.yml
+  - .mise.toml
+  - .stylua.toml
+  - package-lock.json

@@ -3,7 +3,7 @@ local M = {}
 local lsp = require 'x18n.lsp'
 
 local function clients()
-  return vim.lsp.get_clients({ name = 'x18n' })
+  return vim.lsp.get_clients { name = 'x18n' }
 end
 
 local function wait_detached()

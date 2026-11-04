@@ -18,6 +18,9 @@ vim.cmd 'X18nToggleOrigin'
 vim.cmd 'X18nToggleTranslation'
 vim.cmd 'X18nToggleLocaleFileEol'
 
-assert(#vim.api.nvim_buf_get_extmarks(ctx.buf, decorations.namespace(), 0, -1, {}) == 0, 'marks rendered with decorations off')
+assert(
+  #vim.api.nvim_buf_get_extmarks(ctx.buf, decorations.namespace(), 0, -1, {}) == 0,
+  'marks rendered with decorations off'
+)
 assert(vim.wo.conceallevel == 0, 'conceallevel raised with decorations off')
-print('decorations disabled ok')
+print 'decorations disabled ok'

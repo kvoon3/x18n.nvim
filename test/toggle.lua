@@ -13,9 +13,16 @@ assert(count() == 0, 'decorations not cleared by toggle-off')
 
 -- An event-driven refresh while disabled must not re-render.
 vim.api.nvim_buf_set_lines(ctx.buf, 0, 0, false, { '// poke' })
-ctx.wait_for(function() return false end, 600)
+ctx.wait_for(function()
+  return false
+end, 600)
 assert(count() == 0, 'refresh fired while disabled')
 
 assert(decorations.toggle() == true, 'toggle should report on')
-assert(ctx.wait_for(function() return count() >= 2 end), 'decorations did not return after toggle-on')
-print('toggle ok')
+assert(
+  ctx.wait_for(function()
+    return count() >= 2
+  end),
+  'decorations did not return after toggle-on'
+)
+print 'toggle ok'

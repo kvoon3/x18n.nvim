@@ -19,7 +19,11 @@ function M.extract()
     if err then
       return init.notify(err.message, vim.log.levels.WARN)
     end
-    init.debug(('extract ok, %d document change(s) applied via applyEdit'):format(result and result.documentChanges and #result.documentChanges or 0))
+    init.debug(
+      ('extract ok, %d document change(s) applied via applyEdit'):format(
+        result and result.documentChanges and #result.documentChanges or 0
+      )
+    )
   end)
 end
 
@@ -79,7 +83,9 @@ function M.definition()
     hover = value
     done = true
   end)
-  vim.wait(2000, function() return done end, 25)
+  vim.wait(2000, function()
+    return done
+  end, 25)
   if not done or not definitions or #definitions == 0 then
     return false
   end
@@ -156,7 +162,9 @@ function M.code_action()
     key_at = not err and result or nil
     key_done = true
   end)
-  vim.wait(2000, function() return key_done end, 25)
+  vim.wait(2000, function()
+    return key_done
+  end, 25)
   if not key_at or not key_at.key then
     return false
   end
@@ -166,7 +174,9 @@ function M.code_action()
     hover = value
     hover_done = true
   end)
-  vim.wait(2000, function() return hover_done end, 25)
+  vim.wait(2000, function()
+    return hover_done
+  end, 25)
   if not hover or not hover.locales then
     return false
   end
@@ -218,7 +228,7 @@ function M.next_definition()
     end
     local locations = result or {}
     if #locations == 0 then
-      return init.notify('no i18n key under the cursor')
+      return init.notify 'no i18n key under the cursor'
     end
     local current_uri = vim.uri_from_bufnr(bufnr)
     local idx = 0
@@ -298,7 +308,9 @@ function M.show_translations()
     end
     done = true
   end)
-  vim.wait(500, function() return done end, 25)
+  vim.wait(500, function()
+    return done
+  end, 25)
   if not done then
     cancelled = true
   end

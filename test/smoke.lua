@@ -9,14 +9,17 @@ local function marks()
   return vim.api.nvim_buf_get_extmarks(ctx.buf, ns, 0, -1, { details = true })
 end
 
-assert(ctx.wait_for(function()
-  for _, m in ipairs(marks()) do
-    if m[4].conceal ~= nil then
-      return true
+assert(
+  ctx.wait_for(function()
+    for _, m in ipairs(marks()) do
+      if m[4].conceal ~= nil then
+        return true
+      end
     end
-  end
-  return false
-end, 15000), 'no conceal mark appeared')
+    return false
+  end, 15000),
+  'no conceal mark appeared'
+)
 
 local texts = {}
 for _, m in ipairs(marks()) do

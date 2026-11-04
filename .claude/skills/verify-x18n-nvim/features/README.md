@@ -66,7 +66,8 @@ a regression unless the playground itself changed.
 ## Features
 
 - [Inline translations](./inline-translations.md) covers key replacement, values,
-  missing keys, dynamic expressions, and the per-stack matrix.
+  static param filling, missing keys, dynamic expressions, and the per-stack
+  matrix.
 - [Display locale](./display-locale.md) covers default locale values, switching,
   and the locale-file cross-check.
 - [Missing and dynamic keys](./missing-and-dynamic.md) covers arrows and the

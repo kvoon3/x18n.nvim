@@ -33,16 +33,22 @@ assert(#list == 4 and list[1] == 'en', 'locale list wrong: ' .. table.concat(lis
 for i = 2, #list do
   local got = module.next()
   assert(got == list[i], ('expected %s, got %s'):format(list[i], tostring(got)))
-  assert(ctx.wait_for(function()
-    return rendered(list[i])
-  end, 5000), ('decorations did not switch to %s: %s'):format(list[i], marks_text()))
+  assert(
+    ctx.wait_for(function()
+      return rendered(list[i])
+    end, 5000),
+    ('decorations did not switch to %s: %s'):format(list[i], marks_text())
+  )
 end
 
 local wrapped = module.next()
 assert(wrapped == list[1], ('expected wrap to %s, got %s'):format(list[1], tostring(wrapped)))
-assert(ctx.wait_for(function()
-  return rendered(list[1])
-end, 5000), 'decorations did not switch back to ' .. list[1])
+assert(
+  ctx.wait_for(function()
+    return rendered(list[1])
+  end, 5000),
+  'decorations did not switch back to ' .. list[1]
+)
 
 assert(#module.locales() == 4, 'locale list changed during the cycle')
-print('locales ok')
+print 'locales ok'

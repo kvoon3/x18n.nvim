@@ -49,9 +49,12 @@ end
 -- comparison error on sort.
 vim.fn.setqflist {}
 require('x18n.report').run()
-assert(ctx.wait_for(function()
-  return #vim.fn.getqflist() > 0
-end, 8000), 'usageReport never populated the quickfix')
+assert(
+  ctx.wait_for(function()
+    return #vim.fn.getqflist() > 0
+  end, 8000),
+  'usageReport never populated the quickfix'
+)
 
 local report_items = vim.fn.getqflist()
 local real_missing = 0
@@ -62,4 +65,4 @@ for _, item in ipairs(report_items) do
   end
 end
 assert(real_missing >= 1, 'real usageReport lost its missing key')
-print('report ok')
+print 'report ok'

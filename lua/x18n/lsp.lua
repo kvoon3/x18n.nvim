@@ -28,8 +28,7 @@ function M.root_dir_for(markers)
       return
     end
     if #configs > 0 then
-      local found =
-        vim.fs.find(configs, { upward = true, path = vim.fs.dirname(path), type = 'file' })[1]
+      local found = vim.fs.find(configs, { upward = true, path = vim.fs.dirname(path), type = 'file' })[1]
       if found then
         return on_dir(vim.fs.dirname(found))
       end
@@ -118,14 +117,14 @@ function M.setup(opts, on_changed)
 
   M.config = opts
   vim.lsp.config('x18n', opts)
-  vim.lsp.enable('x18n')
+  vim.lsp.enable 'x18n'
 end
 
 --- Apply the plugin's diagnostic option to a client's diagnostic namespace.
 ---@param client vim.lsp.Client
 function M.apply_diagnostics(client)
   local ns = vim.lsp.diagnostic.get_namespace(client.id)
-  local mirror = require('x18n.mirror')
+  local mirror = require 'x18n.mirror'
   local opts = require('x18n').config.diagnostic
   if opts == false then
     vim.diagnostic.reset(ns)
@@ -159,7 +158,9 @@ function M.start(bufnr)
       resolved = dir
       done = true
     end)
-    vim.wait(100, function() return done end, 10)
+    vim.wait(100, function()
+      return done
+    end, 10)
     root = resolved
   end
   root = root or vim.fs.root(bufnr, M.config.root_markers or {})
@@ -173,7 +174,7 @@ end
 
 --- Stop every x18n client in this session.
 function M.stop()
-  for _, client in ipairs(vim.lsp.get_clients({ name = 'x18n' })) do
+  for _, client in ipairs(vim.lsp.get_clients { name = 'x18n' }) do
     client:stop(true)
   end
 end

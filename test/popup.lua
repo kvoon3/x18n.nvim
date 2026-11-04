@@ -30,13 +30,16 @@ end
 
 assert(cursor_onto(ctx.buf, 'app%.title'), 'lost app.title call')
 assert(actions.show_translations() == true, 'show_translations returned false on a key')
-assert(ctx.wait_for(function()
-  return hover_buf() ~= nil
-end, 5000), 'popup never opened')
+assert(
+  ctx.wait_for(function()
+    return hover_buf() ~= nil
+  end, 5000),
+  'popup never opened'
+)
 local text = table.concat(vim.api.nvim_buf_get_lines(hover_buf(), 0, -1, false), '\n')
 assert(text:find('app%.title', 1, false), 'popup lost the key: ' .. text)
 assert(text:find('Hello x18n', 1, true), 'popup lost Hello x18n')
-for _, value in ipairs({ '你好 x18n', 'こんにちは x18n', 'Bonjour x18n' }) do
+for _, value in ipairs { '你好 x18n', 'こんにちは x18n', 'Bonjour x18n' } do
   assert(text:find(value, 1, true), 'popup lost ' .. value .. ': ' .. text)
 end
 -- The reformatted hover: no markdown table pipes, no URL-encoded links.
@@ -47,47 +50,56 @@ assert(text:find('usage', 1, true), 'usage line missing')
 -- The float carries a buffer-local copy-key map for the resolved key. Reach it
 -- the way a user does: focus the float and press the key.
 local fbuf = hover_buf()
-assert(ctx.wait_for(function()
-  for _, m in ipairs(vim.api.nvim_buf_get_keymap(fbuf, 'n')) do
-    if m.lhs == '<C-Y>' then
-      return true
+assert(
+  ctx.wait_for(function()
+    for _, m in ipairs(vim.api.nvim_buf_get_keymap(fbuf, 'n')) do
+      if m.lhs == '<C-Y>' then
+        return true
+      end
     end
-  end
-  return false
-end, 3000), 'popup copy-key map missing')
+    return false
+  end, 3000),
+  'popup copy-key map missing'
+)
 local parent_win = vim.api.nvim_get_current_win()
 local fwin = vim.b[ctx.buf].lsp_floating_preview
 assert(fwin and vim.api.nvim_win_is_valid(fwin), 'float window missing')
 vim.api.nvim_set_current_win(fwin)
 vim.fn.setreg('+', '')
 vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-y>', true, false, true), 'x', false)
-assert(vim.fn.getreg('+') == 'app.title', 'popup copy-key copied: ' .. vim.fn.getreg '+')
+assert(vim.fn.getreg '+' == 'app.title', 'popup copy-key copied: ' .. vim.fn.getreg '+')
 vim.api.nvim_set_current_win(parent_win)
 
 -- The native float stays open until the cursor moves in the parent window.
 assert(hover_buf() ~= nil, 'hover float missing before the move')
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
-assert(ctx.wait_for(function()
-  return hover_buf() == nil
-end, 3000), 'hover float did not close on cursor move')
+assert(
+  ctx.wait_for(function()
+    return hover_buf() == nil
+  end, 3000),
+  'hover float did not close on cursor move'
+)
 
 -- A single-string keymap option is honoured.
 require('x18n').config.translation_popup.keys.copy_key = '<C-g>'
 assert(cursor_onto(ctx.buf, 'app%.title'), 'lost app.title call for the custom map')
 assert(actions.show_translations() == true, 'custom-map popup did not open')
-assert(ctx.wait_for(function()
-  local fb = hover_buf()
-  if not fb then
-    return false
-  end
-  for _, m in ipairs(vim.api.nvim_buf_get_keymap(fb, 'n')) do
-    if m.lhs == '<C-G>' then
-      return true
+assert(
+  ctx.wait_for(function()
+    local fb = hover_buf()
+    if not fb then
+      return false
     end
-  end
-  return false
-end, 5000), 'translation_popup.keys.copy_key was ignored')
+    for _, m in ipairs(vim.api.nvim_buf_get_keymap(fb, 'n')) do
+      if m.lhs == '<C-G>' then
+        return true
+      end
+    end
+    return false
+  end, 5000),
+  'translation_popup.keys.copy_key was ignored'
+)
 close_hover()
 
 -- Off a key: returns false so a keymap can fall through.
@@ -98,11 +110,19 @@ assert(actions.show_translations() == false, 'show_translations true off-key')
 -- UTF-16, not a byte offset.
 assert(cursor_onto(ctx.buf, 'app%.description'), 'lost app.description call')
 assert(actions.show_translations() == true, 'UTF-16 position missed the key after CJK text')
-assert(ctx.wait_for(function()
-  return hover_buf() ~= nil
-end, 5000), 'CJK popup never opened')
+assert(
+  ctx.wait_for(function()
+    return hover_buf() ~= nil
+  end, 5000),
+  'CJK popup never opened'
+)
 local cjk_text = table.concat(vim.api.nvim_buf_get_lines(hover_buf(), 0, -1, false), '\n')
-for _, value in ipairs({ 'A playground for x18n.nvim', 'x18n.nvim の実験場', 'x18n.nvim 的试验场', 'Un terrain de jeu pour x18n.nvim' }) do
+for _, value in ipairs {
+  'A playground for x18n.nvim',
+  'x18n.nvim の実験場',
+  'x18n.nvim 的试验场',
+  'Un terrain de jeu pour x18n.nvim',
+} do
   assert(cjk_text:find(value, 1, true), 'description popup lost ' .. value .. ': ' .. cjk_text)
 end
 close_hover()
@@ -112,8 +132,8 @@ local function float_with(content_pattern)
   for _, w in ipairs(vim.api.nvim_list_wins()) do
     local cfg = vim.api.nvim_win_get_config(w)
     if cfg.relative ~= '' then
-      local text = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(w), 0, -1, false), '\n')
-      if text:find(content_pattern) then
+      local content = table.concat(vim.api.nvim_buf_get_lines(vim.api.nvim_win_get_buf(w), 0, -1, false), '\n')
+      if content:find(content_pattern) then
         return w
       end
     end
@@ -121,13 +141,19 @@ local function float_with(content_pattern)
 end
 
 actions.explain()
-assert(ctx.wait_for(function()
-  return float_with('presets:') ~= nil or float_with('finders:') ~= nil
-end, 5000), 'explain float never opened')
-vim.api.nvim_win_close(float_with('presets:') or float_with('finders:'), true)
+assert(
+  ctx.wait_for(function()
+    return float_with 'presets:' ~= nil or float_with 'finders:' ~= nil
+  end, 5000),
+  'explain float never opened'
+)
+vim.api.nvim_win_close(float_with 'presets:' or float_with 'finders:', true)
 
 require('x18n.status').show()
-assert(ctx.wait_for(function()
-  return float_with('display locale') ~= nil
-end, 5000), 'status float failed to open')
-print('popup/explain ok')
+assert(
+  ctx.wait_for(function()
+    return float_with 'display locale' ~= nil
+  end, 5000),
+  'status float failed to open'
+)
+print 'popup/explain ok'

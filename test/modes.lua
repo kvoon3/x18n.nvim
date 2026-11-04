@@ -16,7 +16,7 @@ local function row_of(pattern)
   error('no row matches ' .. pattern)
 end
 
-local greeting = row_of('app%.title')
+local greeting = row_of 'app%.title'
 
 local function shape(row)
   local out = { conceal = 0, inline_value = nil, eol_value = nil }
@@ -42,23 +42,29 @@ local function total_marks()
 end
 
 local function wait_shape(mode, want)
-  assert(ctx.wait_for(function()
-    local s = shape(greeting)
-    for k, v in pairs(want) do
-      if s[k] ~= v then
-        return false
+  assert(
+    ctx.wait_for(function()
+      local s = shape(greeting)
+      for k, v in pairs(want) do
+        if s[k] ~= v then
+          return false
+        end
       end
-    end
-    return true
-  end, 8000), mode .. ' never rendered: ' .. vim.inspect(shape(greeting)))
+      return true
+    end, 8000),
+    mode .. ' never rendered: ' .. vim.inspect(shape(greeting))
+  )
 end
 
 -- Cursor away from every key: line 1.
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
-assert(ctx.wait_for(function()
-  return total_marks() > 0 and shape(greeting).conceal == 1
-end, 10000), 'baseline conceal never rendered')
+assert(
+  ctx.wait_for(function()
+    return total_marks() > 0 and shape(greeting).conceal == 1
+  end, 10000),
+  'baseline conceal never rendered'
+)
 
 decorations.set_mode 'both'
 wait_shape('both', { conceal = 0, inline_value = ' → Hello x18n' })
@@ -73,9 +79,12 @@ wait_shape('translation_conceal', { conceal = 1, inline_value = 'Hello x18n' })
 assert(vim.wo.conceallevel == 2, 'translation_conceal did not raise conceallevel')
 
 decorations.set_mode 'origin'
-assert(ctx.wait_for(function()
-  return total_marks() == 0
-end, 8000), 'origin kept decorations: ' .. total_marks())
+assert(
+  ctx.wait_for(function()
+    return total_marks() == 0
+  end, 8000),
+  'origin kept decorations: ' .. total_marks()
+)
 assert(vim.wo.conceallevel == 0, 'origin left conceallevel raised')
 
 decorations.set_mode 'eol'
@@ -90,10 +99,13 @@ decorations.set_mode 'translation'
 wait_shape('translation cursor', { conceal = 1, inline_value = ' → Hello x18n' })
 
 decorations.set_mode 'translation_conceal'
-assert(ctx.wait_for(function()
-  local s = shape(greeting)
-  return s.conceal == 1 and s.inline_value == nil and s.eol_value == nil
-end, 8000), 'translation_conceal cursor line is not raw: ' .. vim.inspect(shape(greeting)))
+assert(
+  ctx.wait_for(function()
+    local s = shape(greeting)
+    return s.conceal == 1 and s.inline_value == nil and s.eol_value == nil
+  end, 8000),
+  'translation_conceal cursor line is not raw: ' .. vim.inspect(shape(greeting))
+)
 
 decorations.set_mode 'conceal'
 wait_shape('conceal cursor', { conceal = 1, eol_value = '→ Hello x18n' })
@@ -114,11 +126,14 @@ assert(decorations.toggle_translation() == 'translation', 'origin did not restor
 
 decorations.set_mode 'both'
 assert(decorations.toggle_translation() == 'origin', 'both did not toggle to origin')
-assert(decorations.toggle_origin() == 'translation_conceal', 'origin with last both did not land on translation_conceal')
+assert(
+  decorations.toggle_origin() == 'translation_conceal',
+  'origin with last both did not land on translation_conceal'
+)
 
 local before = decorations.get_mode()
 assert(decorations.set_mode 'nope' == before, 'invalid mode changed the mode')
 assert(decorations.get_mode() == before, 'invalid mode mutated get_mode')
 
 decorations.set_mode 'conceal'
-print('modes ok')
+print 'modes ok'

@@ -188,7 +188,7 @@ local function quoted_range(bufnr, range)
     start is 1-based s_col, the char at the exclusive end is 1-based e_col + 1. ]]
   local before = line:sub(s_col, s_col)
   local after = line:sub(e_col + 1, e_col + 1)
-  if before:match "['\"`]" and after:match "['\"`]" then
+  if before:match '[\'"`]' and after:match '[\'"`]' then
     s_col = s_col - 1
     e_col = e_col + 1
   end
@@ -232,7 +232,10 @@ end
 local function index_missing_diagnostics(bufnr)
   local lines = {}
   for _, diag in ipairs(vim.diagnostic.get(bufnr)) do
-    if diag.source == 'x18n' and (diag.code == 'missing-key' or diag.user_data and type(diag.user_data) == 'table' and diag.user_data.key) then
+    if
+      diag.source == 'x18n'
+      and (diag.code == 'missing-key' or diag.user_data and type(diag.user_data) == 'table' and diag.user_data.key)
+    then
       lines[diag.lnum] = true
     end
   end
@@ -246,7 +249,7 @@ function M.toggle()
     return false
   end
   enabled = not enabled
-  for _, client in ipairs(vim.lsp.get_clients({ name = 'x18n' })) do
+  for _, client in ipairs(vim.lsp.get_clients { name = 'x18n' }) do
     for _, bufnr in ipairs(buffers_of(client)) do
       if enabled then
         M.request(bufnr, client)
@@ -336,13 +339,9 @@ function M.toggle_origin()
     end
     return M.set_mode(back)
   end
-  local target
-  if current == 'both' then
-    target = 'translation_conceal'
-  elseif current == 'translation' or current == 'translation_conceal' or current == 'conceal' then
+  local target = 'translation_conceal'
+  if current == 'translation' or current == 'translation_conceal' or current == 'conceal' then
     target = 'both'
-  else
-    target = 'translation_conceal'
   end
   return M.set_mode(target)
 end
@@ -368,10 +367,10 @@ local function render(bufnr, result)
     ensure_conceallevel(bufnr)
   end
   for _, d in ipairs(result and result.decorations or {}) do
-    if d.state == 'missing' and has_missing_diagnostic(bufnr, d) then
-      --[[ The server publishes the same finding as a diagnostic on the same
-        line; printing it a second time as virtual text only adds noise. ]]
-    elseif p.conceal and d.state == 'ok' and d.value and d.value ~= '' and d.range then
+    --[[ The server publishes a missing-key finding as a diagnostic on the same
+      line; printing it a second time as virtual text only adds noise. ]]
+    local skip = d.state == 'missing' and has_missing_diagnostic(bufnr, d)
+    if not skip and p.conceal and d.state == 'ok' and d.value and d.value ~= '' and d.range then
       --[[ Two shapes per key, swapped by a cursor-line redraw: away from the
         cursor the concealed literal is replaced by its value inline; on the
         cursor's line the raw key shows (conceal always reveals there) and the
@@ -405,7 +404,7 @@ local function render(bufnr, result)
           hl_mode = 'combine',
         })
       end
-    else
+    elseif not skip then
       --[[ Some usages (directives, template pipes) have no enclosing call, so
         the server sends only the key range. Put the marker after that. ]]
       local expression = d.expression or d.range
@@ -578,7 +577,7 @@ function M.refresh(bufnr)
 end
 
 function M.refresh_attached()
-  for _, client in ipairs(vim.lsp.get_clients({ name = 'x18n' })) do
+  for _, client in ipairs(vim.lsp.get_clients { name = 'x18n' }) do
     for _, bufnr in ipairs(buffers_of(client)) do
       M.refresh(bufnr)
     end
@@ -675,7 +674,12 @@ function M.setup(opts)
       clear(a.buf)
     end,
   })
-  aug('BufWritePost', { group = group, callback = function(a) M.refresh(a.buf) end })
+  aug('BufWritePost', {
+    group = group,
+    callback = function(a)
+      M.refresh(a.buf)
+    end,
+  })
   aug('BufEnter', {
     group = group,
     callback = function(a)
@@ -694,7 +698,7 @@ function M.setup(opts)
       end
       --[[ The split inherits the source window's current options. Prefer the
         source window's recorded baseline over the global last-seen one. ]]
-      local previous = vim.fn.win_getid(vim.fn.winnr('#'))
+      local previous = vim.fn.win_getid(vim.fn.winnr '#')
       local level = baseline[previous] or last_baseline
       if level ~= nil then
         baseline[win] = level
@@ -712,8 +716,18 @@ function M.setup(opts)
       end
     end,
   })
-  aug('TextChanged', { group = group, callback = function(a) M.refresh(a.buf) end })
-  aug('InsertLeave', { group = group, callback = function(a) M.refresh(a.buf) end })
+  aug('TextChanged', {
+    group = group,
+    callback = function(a)
+      M.refresh(a.buf)
+    end,
+  })
+  aug('InsertLeave', {
+    group = group,
+    callback = function(a)
+      M.refresh(a.buf)
+    end,
+  })
   aug('ColorScheme', { group = group, callback = define_highlights })
   --[[ Modes can switch at runtime, so the cursor-line machinery is always
     registered and decides per redraw whether the current mode needs it. ]]
@@ -730,8 +744,18 @@ function M.setup(opts)
       redraw(bufnr)
     end, cfg.cursor_redraw_ms or 100)
   end
-  aug('CursorMoved', { group = group, callback = function(a) on_move(a.buf) end })
-  aug('CursorMovedI', { group = group, callback = function(a) on_move(a.buf) end })
+  aug('CursorMoved', {
+    group = group,
+    callback = function(a)
+      on_move(a.buf)
+    end,
+  })
+  aug('CursorMovedI', {
+    group = group,
+    callback = function(a)
+      on_move(a.buf)
+    end,
+  })
   aug('WinEnter', {
     group = group,
     callback = function(a)

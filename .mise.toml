@@ -1,0 +1,4 @@
+[tools]
+stylua = "2.5"
+"cargo:selene" = "0.31"
+"npm:@ls-lint/ls-lint" = "2.3"
