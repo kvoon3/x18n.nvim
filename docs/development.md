@@ -16,19 +16,26 @@ npm install
 - [ls-lint](https://ls-lint.org) enforces file naming (`.ls-lint.yml`):
   snake_case Lua, kebab-case Markdown, scripts and config, with `playground/`,
   `test/fixture/`, `node_modules/` and tool dotfiles ignored.
+- [lefthook](https://lefthook.dev) runs the pre-commit job from `lefthook.yml`.
 
-Without mise, install the three tools yourself; the Makefile calls them by
-name.
+Without mise, install the tools yourself; the Makefile calls them by name.
 
 ## Tasks
 
 ```sh
+make hooks         # enable the pre-commit hook for this clone
 make format        # stylua, in place
 make format-check  # stylua --check
-make lint          # ls-lint + selene
+make lint          # ls-lint + lefthook validate + selene
 make test          # headless test suite
 make check         # all of the above
 ```
+
+The pre-commit hook is defined in `lefthook.yml`: stylua formats staged Lua
+files and re-stages them (`stage_fixed`), then selene lints them, then ls-lint
+checks the staged names. Jobs run in order, so selene sees the formatted
+result. A file with unstaged hunks is staged in full after formatting. The hook
+needs `stylua`, `selene` and `ls-lint` on `PATH`.
 
 Style lives in `.stylua.toml`: LuaJIT syntax, two-space indent, 120 columns,
 single quotes, no call parentheses.

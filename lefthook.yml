@@ -1,0 +1,11 @@
+pre-commit:
+  jobs:
+    - name: stylua
+      glob: "**/*.lua"
+      run: stylua {staged_files}
+      stage_fixed: true
+    - name: selene
+      glob: "**/*.lua"
+      run: selene --display-style quiet {staged_files}
+    - name: ls-lint
+      run: ls-lint {staged_files}
