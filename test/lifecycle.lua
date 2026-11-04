@@ -4,6 +4,16 @@ local ctx = ...
 local lifecycle = require 'x18n.lifecycle'
 local ns = require('x18n.decorations').namespace()
 
+if ctx.upstream then
+  -- The published server has no usage counts, so show the value in this lane.
+  require('x18n.decorations').setup {
+    mode = 'conceal',
+    debounce_ms = 100,
+    show_locale_file_eol_translation = true,
+    show_locale_file_eol_usage = true,
+  }
+end
+
 -- -l mode does not source plugin/ scripts; load the command definitions.
 vim.cmd 'runtime! plugin/x18n.lua'
 

@@ -42,5 +42,6 @@ assert(text:find('source', 1, true), 'source locale marker missing: ' .. text)
 -- Every fixture key is translated in every locale; missing counts appear when >0.
 assert(text:find('display locale', 1, true), 'display locale missing: ' .. text)
 assert(text:find('show mode conceal', 1, true), 'show mode missing: ' .. text)
-assert(text:find('locale-file EOL on', 1, true), 'locale-file EOL state missing: ' .. text)
+local eol = require('x18n.decorations').locale_file_eol()
+assert(text:find('locale-file EOL ' .. (eol and 'on' or 'off'), 1, true), 'locale-file EOL state missing: ' .. text)
 print 'status ok'

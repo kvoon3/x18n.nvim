@@ -28,9 +28,10 @@ end
 
 assert(
   ctx.wait_for(function()
-    return rendered() ~= nil
+    local text = rendered()
+    return text ~= nil and text:find('Hello Ada', 1, true) ~= nil
   end, 10000),
-  'greeting decoration never rendered'
+  'call params not interpolated into the preview: ' .. tostring(rendered())
 )
 local text = rendered()
 assert(text:find('Hello Ada', 1, true), 'call params not interpolated into the preview: ' .. text)

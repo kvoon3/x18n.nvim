@@ -8,7 +8,7 @@ require('x18n').setup {
   decorations = {
     enabled = true,
     mode = 'conceal', -- conceal | both | translation | translation_conceal | origin | inline | eol
-    show_locale_file_eol_translation = true,
+    show_locale_file_eol_translation = false, -- also show the display-locale value
     show_locale_file_eol_usage = true,
     debounce_ms = 400,
     cursor_redraw_ms = 100,

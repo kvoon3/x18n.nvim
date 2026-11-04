@@ -54,4 +54,4 @@ until they ship.
   source fallback removed.
 - Static param values limited to string literals and same-block string bindings.
 - Upstream test lane added.
-- Locale-file annotations show the value before the usage count.
+- Locale-file annotations show the usage count; the display value is opt-in.

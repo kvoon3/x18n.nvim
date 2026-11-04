@@ -38,9 +38,10 @@ local defaults = {
       too; 'inline' puts the value after the call and 'eol' parks it at the end
       of the line. ]]
     mode = 'conceal',
-    --[[ Locale files always show the display-locale value at the end of each
-      key line; usage badges ride beside it when the server reports counts. ]]
-    show_locale_file_eol_translation = true,
+    --[[ Locale files show the usage count at the end of each key line. Set
+      show_locale_file_eol_translation = true to also show the display-locale
+      value. ]]
+    show_locale_file_eol_translation = false,
     show_locale_file_eol_usage = true,
     debounce_ms = 400,
     cursor_redraw_ms = 100,

@@ -37,10 +37,10 @@ its value in every locale, missing ones marked.
 ## Locale-file annotations
 
 Inside `en.json`, `zh-CN.json`, `ja.json`, `fr.json` and friends, each key line
-shows its value in the display locale at the end of the line. With the fork it
-also shows its usage count. Both segments have their own switch:
-`:X18nToggleLocaleFileEol` for the value, `show_locale_file_eol_usage = false`
-for the badge.
+shows its usage count at the end of the line. The value is already in the file,
+so the display-locale value is opt-in: set
+`show_locale_file_eol_translation = true` or use `:X18nToggleLocaleFileEol`.
+`show_locale_file_eol_usage = false` hides the badge.
 
 ## Definition and usages
 

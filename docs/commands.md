@@ -21,7 +21,7 @@
 | `:X18nToggleDecorations` | Master switch for all decorations |
 | `:X18nToggleTranslation` | Swap the translation overlay for the raw key and back |
 | `:X18nToggleOrigin` | Toggle raw-key visibility while translations stay active |
-| `:X18nToggleLocaleFileEol` | Toggle end-of-line translations in locale files |
+| `:X18nToggleLocaleFileEol` | Toggle the display-locale value at the end of locale-file lines |
 | `:X18nStatus` | Show projects, locales, progress, mode and EOL state |
 | `:X18nExplain` | Show how the server understood the workspace |
 | `:X18nOpenUi` | Open the x18n web UI in the browser |

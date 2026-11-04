@@ -41,7 +41,7 @@ vim.cmd 'X18nToggleOrigin'
 assert(decorations.get_mode() == 'both', 'ToggleOrigin did not enter both from conceal: ' .. decorations.get_mode())
 decorations.set_mode(before)
 vim.cmd 'X18nToggleLocaleFileEol'
-assert(decorations.locale_file_eol() == false, 'ToggleLocaleFileEol did not turn off')
-vim.cmd 'X18nToggleLocaleFileEol'
 assert(decorations.locale_file_eol() == true, 'ToggleLocaleFileEol did not turn on')
+vim.cmd 'X18nToggleLocaleFileEol'
+assert(decorations.locale_file_eol() == false, 'ToggleLocaleFileEol did not turn off')
 print 'commands ok'

@@ -18,8 +18,8 @@ UI.
 - **Inline translations** — `t('app.title')` reads as `t(Hello x18n)` in the
   display locale, with static call params filled by the fork. Missing keys yield
   to the server's diagnostic.
-- **Locale files** — display-locale values beside every key line, with usage
-  counts from the fork.
+- **Locale files** — usage counts beside every key line from the fork, with
+  opt-in display-locale values.
 - **Native LSP** — completion, hover, rename, references, code lens and
   diagnostics. The fork adds all-locale completion docs.
 - **Navigation** — definition and usage lists, key and value search, locale
