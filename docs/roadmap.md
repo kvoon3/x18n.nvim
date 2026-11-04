@@ -1,21 +1,26 @@
 # Roadmap
 
-## Now: converge the fork
+## Now: upstream the fork additions
 
-The plugin needs a small set of additions from the x18n server. The fork keeps
-those additions until upstream accepts them.
+The small fixes are merged. The remaining delta goes upstream in this order.
 
-- Keep the fork delta to `x18n/keyInfo`, completion resolve, param-filled
-  values, component decorations, `fileKeys[].usages` and the hover flush.
-- Send the generic changes upstream: param-filled values, completion resolve,
-  component decorations, usage counts and the hover flush.
-- Propose `x18n/keyInfo` upstream as an optional custom method. If upstream
-  accepts it, drop the fork.
+- `feat(lsp): report usage counts in x18n/fileKeys` (PR 4). The Neovim
+  locale-file badge is the first consumer; the same field can drive VS Code and
+  Zed annotations. Screenshot and draft PR are next.
+- The param stack is held until the small PRs land:
+  - `feat(builtins): record static param values on usages` (PR 5) records string
+    literals and same-block string bindings on `Usage`.
+  - `feat(lsp): fill static call params into decoration and inlay-hint values`
+    (PR 6) fills simple placeholders in the displayed value.
+- `x18n/keyInfo` (PR 7) needs an issue to settle the method name and shape before
+  a PR.
+- The server entry mode (PR 8) is a packaging fix.
 - Keep the plugin tests running against the published server with
   `make test-upstream`.
 
-Exit criteria: the fork diff is one protocol method plus the generic changes,
-the upstream lane passes, and `FORK.md` lists every remaining difference.
+Exit criteria: each addition is merged upstream and removed from the fork. The
+fork keeps only `x18n/keyInfo` if upstream declines it, plus the generic changes
+until they ship.
 
 ## Next: editor features
 
@@ -41,9 +46,12 @@ the upstream lane passes, and `FORK.md` lists every remaining difference.
 
 ## Done
 
+- Hover flush, component decorations and completion resolve merged upstream
+  (#127, #129, #130).
 - Fork synced to upstream `a44a460` (v0.1.9 plus one commit).
 - Key details moved from standard hover to `x18n/keyInfo`.
 - Markdown hover fallback, locale index pairing and the `copy_translation`
   source fallback removed.
-- Static param values limited to string literals and same-block constants.
+- Static param values limited to string literals and same-block string bindings.
 - Upstream test lane added.
+- Locale-file annotations show the value before the usage count.
