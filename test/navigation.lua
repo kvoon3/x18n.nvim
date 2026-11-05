@@ -1,5 +1,3 @@
--- Navigation: edit, split, vsplit and tabedit change the window layout while
--- landing on the same location, and the configured default is honoured.
 local ctx = ...
 local util = require 'x18n.util'
 

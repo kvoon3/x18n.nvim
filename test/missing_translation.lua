@@ -1,5 +1,3 @@
--- missing-translation lives on the source locale entry; the plugin mirrors it
--- onto every code usage, so the warning is visible while editing the call site.
 local ctx = ...
 
 local mirror = require 'x18n.mirror'
@@ -18,8 +16,6 @@ local function has_code(bufnr, code)
   return false
 end
 
--- The fixture starts with app.missing.key absent from en: the server reports
--- missing-key on the usage and there is nothing to mirror yet.
 assert(
   ctx.wait_for(function()
     return has_code(ctx.buf, 'missing-key')
@@ -28,8 +24,6 @@ assert(
 )
 assert(#mirrored() == 0, 'mirror fired before the key existed in the source')
 
--- Add the key to en only. The code error clears, and the target-locale warning
--- appears in en.json while its mirror lands on the main.js usage.
 vim.cmd('edit ' .. ctx.playground .. '/locales/en.json')
 vim.cmd 'filetype detect'
 local en = vim.api.nvim_get_current_buf()
@@ -73,7 +67,6 @@ for _, locale in ipairs { 'fr', 'ja', 'zh-CN' } do
 end
 assert(warning.message:find('app.missing.key', 1, true), 'mirror lost the key: ' .. warning.message)
 
--- The server's own warning is still on the source entry, same severity.
 local source_warning
 for _, d in ipairs(vim.diagnostic.get(en)) do
   if d.code == 'missing-translation' then
@@ -82,7 +75,6 @@ for _, d in ipairs(vim.diagnostic.get(en)) do
 end
 assert(source_warning and source_warning.severity == WARN, 'server warning missing in en.json')
 
--- Removing the source key restores the error and clears the mirror.
 vim.api.nvim_buf_set_lines(en, 0, -1, false, original)
 assert(
   ctx.wait_for(function()

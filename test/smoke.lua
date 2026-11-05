@@ -1,6 +1,3 @@
--- Smoke: server attaches, the default conceal decorations render for
--- t('app.title') and the missing key, and once the missing-key diagnostic
--- lands the arrow yields to it.
 local ctx = ...
 local decorations = require 'x18n.decorations'
 local ns = decorations.namespace()
@@ -30,7 +27,6 @@ end
 local joined = table.concat(texts, '\n')
 assert(joined:find('Hello x18n', 1, true), 'app.title value missing from decorations: ' .. joined)
 
--- The missing key is flagged until the diagnostic lands, then the arrow yields.
 local diag_landed = ctx.wait_for(function()
   for _, diag in ipairs(vim.diagnostic.get(ctx.buf)) do
     if diag.source == 'x18n' and diag.code == 'missing-key' then

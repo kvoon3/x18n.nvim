@@ -1,8 +1,5 @@
 local M = {}
 
--- Render x18n/keyInfo as aligned plain text for the translations float. The
--- server returns raw values; this module owns the presentation.
-
 ---@param info table KeyInfoResult from the server
 ---@return string[] lines
 function M.render(info)

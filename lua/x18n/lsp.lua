@@ -1,6 +1,5 @@
 local M = {}
 
--- The resolved config, kept for manual start after :X18nEnable/:X18nReload.
 M.config = nil
 
 --- Build a root_dir function from marker names. An x18n config anywhere upward
@@ -34,8 +33,6 @@ function M.root_dir_for(markers)
       end
     end
     if has_function then
-      --[[ A marker predicate cannot be stat'ed here; let Neovim resolve the
-        whole list. ]]
       local root = vim.fs.root(bufnr, markers)
       if root then
         return on_dir(root)
@@ -52,26 +49,8 @@ function M.root_dir_for(markers)
   end
 end
 
---- Register the x18n language server with the native LSP stack.
----@param opts vim.lsp.Config User overrides merged on top of the plugin defaults.
----@param on_changed function Called on the server's x18n/changed notification.
-function M.setup(opts, on_changed)
-  opts = vim.deepcopy(opts)
-  opts.name = 'x18n'
-  opts.handlers = opts.handlers or {}
-
-  --[[ Resolve the configured markers ourselves (see root_dir_for): native
-    vim.fs.root treats the marker list in order, so an ancestor package.json
-    wins over a closer composer.json or Gemfile. ]]
-  if not opts.root_dir and type(opts.root_markers) == 'table' then
-    opts.root_dir = M.root_dir_for(opts.root_markers)
-  end
-
-  --[[ Diagnostics are pushed by the server. When the plugin option is false,
-    empty every publish and reset what is already on screen. The raw payload
-    also feeds the mirror that puts target-locale warnings on code usages. ]]
-  local user_diagnostics = opts.handlers['textDocument/publishDiagnostics']
-  opts.handlers['textDocument/publishDiagnostics'] = function(err, result, ctx, config)
+local function publish_diagnostics(user_diagnostics)
+  return function(err, result, ctx, config)
     local diagnostics = require('x18n').config.diagnostic
     if diagnostics == false and result then
       result = vim.tbl_extend('force', result, { diagnostics = {} })
@@ -87,9 +66,23 @@ function M.setup(opts, on_changed)
     end
     return vim.lsp.handlers['textDocument/publishDiagnostics'](err, result, ctx, config)
   end
+end
 
-  --[[ The server pushes locale-file changes as a custom notification; decorations
-    subscribe through this hook instead of polling. ]]
+--- Register the x18n language server with the native LSP stack.
+---@param opts vim.lsp.Config User overrides merged on top of the plugin defaults.
+---@param on_changed function Called on the server's x18n/changed notification.
+function M.setup(opts, on_changed)
+  opts = vim.deepcopy(opts)
+  opts.name = 'x18n'
+  opts.handlers = opts.handlers or {}
+
+  if not opts.root_dir and type(opts.root_markers) == 'table' then
+    opts.root_dir = M.root_dir_for(opts.root_markers)
+  end
+
+  opts.handlers['textDocument/publishDiagnostics'] =
+    publish_diagnostics(opts.handlers['textDocument/publishDiagnostics'])
+
   local user_handler = opts.handlers['x18n/changed']
   opts.handlers['x18n/changed'] = function(err, result, ctx)
     if user_handler then
@@ -122,8 +115,6 @@ function M.apply_diagnostics(client)
     }, ns)
   elseif type(opts) == 'table' then
     vim.diagnostic.config(opts, ns)
-    --[[ The mirrored warning is a presentation choice too; carry the user's
-      diagnostic table over to its namespace. ]]
     vim.diagnostic.config(opts, mirror.namespace())
   end
 end

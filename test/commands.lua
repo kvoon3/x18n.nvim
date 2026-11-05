@@ -1,5 +1,3 @@
--- Command wiring: every documented command exists, and the toggle commands
--- drive the decoration state they advertise.
 local _ = ...
 
 vim.cmd 'runtime! plugin/x18n.lua'

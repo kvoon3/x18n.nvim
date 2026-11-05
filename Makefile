@@ -1,7 +1,7 @@
-LUA_DIRS := lua plugin test .claude/skills/verify-x18n-nvim/scripts
+LUA_DIRS := lua plugin test scripts .claude/skills/verify-x18n-nvim/scripts
 NVIM ?= nvim
 
-.PHONY: all check format format-check hooks lint ls-lint test test-fork
+.PHONY: all check comment-lint format format-check hooks lint ls-lint test test-fork
 
 all: check
 
@@ -16,7 +16,10 @@ format:
 format-check:
 	stylua --check $(LUA_DIRS)
 
-lint: ls-lint
+comment-lint:
+	@$(NVIM) -l scripts/lint_comments.lua $(LUA_DIRS)
+
+lint: ls-lint comment-lint
 	lefthook validate
 	selene $(LUA_DIRS)
 

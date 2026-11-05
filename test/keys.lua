@@ -1,9 +1,5 @@
--- Key picker: copy key, copy the display-locale translation, jump to the
--- display-locale definition, choose a locale, and open in a split.
 local ctx = ...
 if ctx.upstream then
-  -- Without keyInfo, copy_translation must not copy the source text under a
-  -- display-locale label.
   local keys = require 'x18n.keys'
   vim.ui.select = function(items, _, on_choice)
     for _, item in ipairs(items) do
@@ -47,7 +43,6 @@ local function only()
   vim.cmd('edit ' .. ctx.playground .. '/src/main.js')
 end
 
--- Copy key.
 vim.fn.setreg('+', '')
 keys.pick 'copy_key'
 assert(
@@ -57,7 +52,6 @@ assert(
   'copy_key failed'
 )
 
--- Copy the display-locale translation (en is the source and default).
 vim.fn.setreg('+', '')
 keys.pick 'copy_translation'
 assert(
@@ -67,7 +61,6 @@ assert(
   'copy_translation failed: ' .. vim.fn.getreg '+'
 )
 
--- A non-source display locale goes through the keyInfo path.
 actions.set_display_locale 'ja'
 assert(
   ctx.wait_for(function()
@@ -91,7 +84,6 @@ assert(
   'display locale did not switch back to en'
 )
 
--- Jump uses the display-locale definition.
 vim.cmd 'enew'
 keys.pick 'jump'
 assert(
@@ -102,7 +94,6 @@ assert(
 )
 assert(vim.api.nvim_get_current_line():find('title', 1, true), 'cursor not on the title key')
 
--- Choose-locale opens a second picker and lands in that locale's file.
 only()
 local before = #selects
 keys.pick 'choose_locale'
@@ -123,7 +114,6 @@ for _, code in ipairs { 'en', 'zh-CN', 'ja', 'fr' } do
 end
 assert(vim.api.nvim_get_current_line():find('title', 1, true), 'choose_locale missed the key')
 
--- Split opens a second window on the display-locale definition.
 only()
 keys.pick 'split'
 assert(
@@ -134,8 +124,6 @@ assert(
 )
 assert(vim.api.nvim_buf_get_name(0):find('en.json', 1, true), 'split landed in the wrong buffer')
 
--- A server without keyInfo must not copy the source text under a display-locale
--- label. The register stays untouched.
 only()
 local locales = require 'x18n.locales'
 local original_key_info = locales.key_info

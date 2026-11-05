@@ -1,17 +1,7 @@
--- Headless harness: boots nvim with the plugin, copies the test fixture to a
--- temp dir, opens its fixture file, waits for the x18n server to report ready,
--- then runs assertions.
--- Usage: nvim -l test/harness.lua <script.lua>
-
 local plugin_root = vim.fn.fnamemodify(debug.getinfo(1, 'S').source:sub(2), ':h:h'):gsub('/playground$', '')
 local script = assert(arg[1], 'usage: nvim -l test/harness.lua <script.lua>')
--- The opt-out test declares its setup variant in its filename.
 local decorations_disabled = script:find('decorations_disabled', 1, true) ~= nil
 
---[[ Tests never touch the vendored upstream playground: copy the pristine
-  fixture to a temp dir and point the server at that copy. The fixture needs no
-  node_modules: the server aliases @x18n/core and the presets to its own
-  installation when it loads the config. ]]
 local fixture = plugin_root .. '/test/fixture'
 --[[ Outside nvim's tempname root: vim.fn.tempname() is reaped by nvim on exit
   while the server may still be shutting down, and diagnostics/cache writes go
@@ -32,9 +22,6 @@ vim.api.nvim_create_autocmd('VimLeavePre', {
 })
 
 vim.opt.runtimepath:prepend(plugin_root)
--- The root devDependency is the published server. Set X18N_LSP_BIN to run the
--- same suite against a local kvoon3/x18n build, which implements the extended
--- UI methods.
 local bin = vim.env.X18N_LSP_BIN or (plugin_root .. '/node_modules/@x18n/lsp/bin.mjs')
 local opts = {
   lsp = {
@@ -67,23 +54,17 @@ local function server_ready()
 end
 
 vim.cmd('edit ' .. playground_fixture .. '/src/main.js')
--- -l mode skips filetype detection, which the LSP attach rules key on.
+--[[ -l mode skips filetype detection, which the LSP attach rules key on. ]]
 vim.cmd 'filetype detect'
 assert(vim.bo.filetype == 'javascript', 'filetype detection failed, got ' .. vim.bo.filetype)
 assert(wait_for(server_ready), 'x18n server did not attach to src/main.js')
 
--- The server indexes after initialize; wait until decorations report a real locale.
 if not decorations_disabled then
   wait_for(function()
     return #vim.api.nvim_buf_get_extmarks(0, require('x18n.decorations').namespace(), 0, -1, {}) > 0
   end)
 end
 
---[[ Published servers through 0.1.10 cover standard LSP, the shared x18n/*
-  methods, completion resolve and embedded-<i18n> decorations. The kvoon3/x18n
-  fork adds x18n/keyInfo, locale-file usage counts and param-filled values.
-  Probe keyInfo once: an unknown method answers with an LSP error, a supported
-  one answers null on a line without a key. ]]
 local function key_info_available()
   local client = vim.lsp.get_clients({ name = 'x18n' })[1]
   if not client then

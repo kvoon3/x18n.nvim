@@ -1,5 +1,3 @@
--- Decorations opted out in config: the module is never set up, so every
--- toggle and command must be a no-op instead of indexing a nil config.
 local ctx = ...
 local decorations = require 'x18n.decorations'
 
@@ -12,7 +10,6 @@ assert(decorations.toggle_locale_file_eol() == false, 'EOL toggle changed an unc
 assert(decorations.toggle() == false, 'master toggle changed an unconfigured module')
 assert(decorations.locale_file_eol() == false, 'unconfigured module reports EOL on')
 
--- Commands are wired and must not raise.
 vim.cmd 'X18nToggleDecorations'
 vim.cmd 'X18nToggleOrigin'
 vim.cmd 'X18nToggleTranslation'

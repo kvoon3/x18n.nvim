@@ -1,6 +1,3 @@
--- Window state: switching between concealed splits must not un-conceal the
--- inactive one, a plain buffer must get the saved level back, and a new split
--- must not inherit the level this module raised.
 local ctx = ...
 
 local main = ctx.playground .. '/src/main.js'
@@ -32,7 +29,6 @@ assert(
   'both concealed splits are not at level 2'
 )
 
--- Switching windows leaves the inactive concealed window raised.
 vim.cmd 'wincmd w'
 assert(
   ctx.wait_for(function()
@@ -46,7 +42,6 @@ assert(
   'window switch dropped conceal in the inactive window'
 )
 
--- A plain buffer restores only the window that shows it.
 vim.cmd('edit ' .. plain)
 vim.cmd 'filetype detect'
 assert(
@@ -63,7 +58,6 @@ for _, win in ipairs(wins) do
 end
 assert(other and level(other) == 2, 'plain edit lowered the other code window')
 
--- A split from a concealed window starts at the saved level.
 vim.cmd('split ' .. main)
 assert(
   ctx.wait_for(function()

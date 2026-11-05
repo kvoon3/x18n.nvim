@@ -1,12 +1,3 @@
--- Headless inline-translation verifier for the vendored upstream playground.
--- Run through scripts/verify-playground.sh; see the skill's SKILL.md.
---
--- For each source file: boot the real plugin and x18n server in a clean
--- headless nvim, copy the project to a temp dir, set each project locale, and
--- read the rendered screen cells after redraw. The expected line is rebuilt
--- from the server's x18n/decorations reply, and one value per file/locale is
--- cross-checked with `x18n get --json` against the locale files.
-
 local repo = assert(vim.env.X18N_VERIFY_REPO, 'X18N_VERIFY_REPO is required')
 local project_name = assert(vim.env.X18N_VERIFY_PROJECT, 'X18N_VERIFY_PROJECT is required')
 local only_locale = vim.env.X18N_VERIFY_LOCALE
@@ -108,8 +99,6 @@ local function trim(text)
   return (text or ''):gsub('%s+$', '')
 end
 
---- Widen the conceal range over the quote characters around the key literal,
---- matching lua/x18n/decorations.lua quoted_range.
 local function quoted_range(bufnr, range)
   local s_line, s_col = util.to_byte(bufnr, range.start)
   local e_line, e_col = util.to_byte(bufnr, range['end'])
@@ -126,9 +115,6 @@ local function quoted_range(bufnr, range)
   return s_line, s_col, e_line, e_col
 end
 
---- The plugin suppresses the missing arrow when the server already publishes a
---- missing-key diagnostic on that line. The screen check has diagnostics
---- hidden, so the expected line is the raw one in that case.
 local function missing_suppressed(bufnr, d)
   if d.state ~= 'missing' or not d.range then
     return false
@@ -145,14 +131,12 @@ local function missing_suppressed(bufnr, d)
   return false
 end
 
---- Rebuild every decorated line from the server's decorations, the same way
---- conceal mode renders it for a line that is not the cursor line.
 local function expected_lines(bufnr, decorations)
   local per_line = {}
   for _, d in ipairs(decorations or {}) do
     if d.range and not missing_suppressed(bufnr, d) then
-      -- Buffer line numbers in the API and screenpos are 1-based; the LSP
-      -- range is 0-based.
+      --[[ Buffer line numbers in the API and screenpos are 1-based; the LSP
+        range is 0-based. ]]
       local line = d.range.start.line + 1
       local _, s_col, _, e_col = quoted_range(bufnr, d.range)
       local op
@@ -262,9 +246,6 @@ local function cli_status(root)
   return { keys = keys, usages = usages, resources = resources, locales = table.concat(locales, ',') }
 end
 
---- One value from the locale files through the CLI, independently of the
---- server's decorations reply. Nil + reason means the cross-check could not
---- run; a value mismatch is a real failure.
 local function cli_value(root, key, locale)
   local result = vim
     .system({
@@ -368,10 +349,6 @@ local function verify_file(relative)
     locales = { only_locale }
   end
 
-  -- Pick a line without decorations for the cursor. Conceal always reveals the
-  -- cursor line, so every decorated line is checked away from the cursor. A
-  -- one-line file gets a scratch blank line so its usage line can be away from
-  -- the cursor too.
   local current = request(client, 'x18n/decorations', { uri = uri })
   if not current or #(current.decorations or {}) == 0 then
     local contents = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), '\n')
@@ -441,8 +418,6 @@ local function verify_file(relative)
         actual[line] = row > 0 and screen_text(row) or '<line not visible>'
       end
 
-      -- A missing key covered by the server's missing-key diagnostic has no
-      -- arrow by design; record the diagnostic path as its own check.
       for _, d in ipairs(decorations.decorations or {}) do
         if missing_suppressed(bufnr, d) then
           add_check {
@@ -502,8 +477,6 @@ local function verify_file(relative)
         evidence[#evidence + 1] = ''
       end
 
-      -- Cross-check one rendered value against the CLI's read of the locale
-      -- files. Missing CLI data is reported but does not fail the screen check.
       local sample
       for _, d in ipairs(decorations.decorations or {}) do
         if d.state == 'ok' and d.value and d.value ~= '' and d.key then

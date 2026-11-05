@@ -21,6 +21,8 @@ run. The plugin itself is pure Lua and has no Node runtime dependency.
   snake_case Lua, kebab-case Markdown, scripts and config, with `playground/`,
   `test/fixture/`, `node_modules/` and tool dotfiles ignored.
 - [lefthook](https://lefthook.dev) runs the pre-commit job from `lefthook.yml`.
+- `scripts/lint_comments.lua` enforces the comment policy: a Lua comment is
+  either a LuaLS doc (`---`) or a long comment (`--[[ ... ]]`).
 
 Without mise, install the tools yourself; the Makefile calls them by name.
 
@@ -30,17 +32,26 @@ Without mise, install the tools yourself; the Makefile calls them by name.
 make hooks         # enable the pre-commit hook for this clone
 make format        # stylua, in place
 make format-check  # stylua --check
-make lint          # ls-lint + lefthook validate + selene
+make lint          # ls-lint + comment lint + lefthook validate + selene
 make test          # headless test suite, published server
 make test-fork     # same suite, fork server from X18N_LSP_BIN
 make check         # format-check + lint + test
 ```
 
 The pre-commit hook is defined in `lefthook.yml`: stylua formats staged Lua
-files and re-stages them (`stage_fixed`), then selene lints them, then ls-lint
-checks the staged names. Jobs run in order, so selene sees the formatted
-result. A file with unstaged hunks is staged in full after formatting. The hook
-needs `stylua`, `selene` and `ls-lint` on `PATH`.
+files and re-stages them (`stage_fixed`), then selene lints them, then the
+comment checker runs, then ls-lint checks the staged names. Jobs run in order,
+so selene sees the formatted result. A file with unstaged hunks is staged in
+full after formatting. The hook needs `stylua`, `selene`, `ls-lint` and `nvim`
+on `PATH`.
+
+## Comments
+
+Lua comments carry a form, not a mood: `---` for LuaLS docs and `--[[ ... ]]`
+for a contract note. Single-line narration (`-- ...`) is rejected by
+`make lint` and by the pre-commit hook. A comment about behavior we do not own
+names the foreign system and the exact symbol that forces it; everything else
+is code that should explain itself.
 
 Style lives in `.stylua.toml`: LuaJIT syntax, two-space indent, 120 columns,
 single quotes, no call parentheses.

@@ -58,6 +58,17 @@ function M.set_display_locale(locale)
   require('x18n.decorations').refresh_attached()
 end
 
+local function project_by_name(projects, name)
+  if not name then
+    return nil
+  end
+  for _, candidate in ipairs(projects or {}) do
+    if candidate.name == name then
+      return candidate
+    end
+  end
+end
+
 --- List the key's locale definitions in the quickfix, the same list-first flow
 --- as `grr` for references. A single definition jumps directly. Returns false
 --- when the cursor is not on an x18n key or no client owns this buffer.
@@ -89,18 +100,7 @@ function M.definition()
   if #definitions == 1 then
     return util.jump(definitions[1].location)
   end
-  --[[ The key's own project carries the source and display markers. When the
-    server has no keyInfo, use the first project. ]]
-  local project
-  if info and info.project then
-    for _, candidate in ipairs(projects or {}) do
-      if candidate.name == info.project then
-        project = candidate
-        break
-      end
-    end
-  end
-  project = project or (projects and projects[1])
+  local project = project_by_name(projects, info and info.project) or (projects and projects[1])
   local source = project and project.sourceLocale
   local display = project and project.displayLocale or locales.display_locale()
   --[[ Build the quickfix items in the definitions order. locations_to_items
@@ -242,7 +242,6 @@ function M.next_definition()
   end)
 end
 
---- Copy the resolved key from inside the translations float.
 local function set_copy_keymap(bufnr, key)
   local cfg = require('x18n').config.translation_popup or {}
   local keys = cfg.keys and cfg.keys.copy_key or { '<C-y>' }
@@ -276,8 +275,6 @@ function M.show_translations()
     character = util.to_utf16(bufnr, row - 1, col),
   }, function(info)
     if cancelled then
-      --[[ The wait below already returned false; opening now would fire both the
-      caller's fallback and the popup. ]]
       return
     end
     if info then
@@ -329,7 +326,8 @@ function M.explain()
   end)
 end
 
-local fallbacks = { gh = {}, gd = {}, ['<C-.>'] = {} } -- lhs -> bufnr -> captured binding
+---@type table<string, table<integer, function>>
+local fallbacks = { gh = {}, gd = {}, ['<C-.>'] = {} }
 
 local function fallback(bufnr, lhs, native)
   if fallbacks[lhs][bufnr] == nil then

@@ -7,8 +7,10 @@ local M = {}
   warning is invisible while editing a usage. Mirror it onto every usage of the
   same key in the code buffers the decorations pass already enumerated. ]]
 local ns = vim.api.nvim_create_namespace 'x18n_missing_translation'
-local missing = {} -- client id -> locale-file uri -> key -> message
-local cache = {} -- bufnr -> last decorations reply
+---@type table<integer, table<string, table<string, string>>>
+local missing = {}
+---@type table<integer, table>
+local cache = {}
 
 local function reset(bufnr)
   if vim.api.nvim_buf_is_valid(bufnr) then
@@ -16,8 +18,6 @@ local function reset(bufnr)
   end
 end
 
----@param client_id integer
----@return table<string, string> key -> server message
 local function messages_for(client_id)
   local out = {}
   for _, keys in pairs(missing[client_id] or {}) do
@@ -28,13 +28,8 @@ local function messages_for(client_id)
   return out
 end
 
----@param bufnr integer
----@param pos {line: integer, character: integer}
----@return integer row, integer col
 local function position(bufnr, pos)
   local row, col = util.to_byte(bufnr, pos)
-  --[[ Cached decoration ranges can trail a buffer right after an edit; clamping
-    keeps a stale reply from pushing a diagnostic past the end of the buffer. ]]
   local last = vim.api.nvim_buf_line_count(bufnr) - 1
   if row > last then
     return last, 0
@@ -42,7 +37,6 @@ local function position(bufnr, pos)
   return row, col
 end
 
----@param bufnr integer
 local function apply(bufnr)
   local result = cache[bufnr]
   if not result or not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
@@ -139,7 +133,6 @@ function M.clear_all()
   missing = {}
 end
 
---- Exposed for tests.
 function M.namespace()
   return ns
 end

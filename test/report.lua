@@ -1,5 +1,3 @@
--- Usage report: missing entries carry every usage site, unused entries one
--- definition, and both reach the quickfix with a real file and line.
 local ctx = ...
 
 local main_uri = vim.uri_from_fname(ctx.playground .. '/src/main.js')
@@ -44,9 +42,6 @@ for _, item in ipairs(missing) do
   assert(name(item):find('src/main.js', 1, true), 'missing item lost its file')
 end
 
--- The real server shape: one missing key with a usage location and one unused
--- definition. Before the plural fix this path produced nil filenames and a
--- comparison error on sort.
 vim.fn.setqflist {}
 require('x18n.report').run()
 assert(

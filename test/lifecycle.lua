@@ -1,11 +1,8 @@
--- Lifecycle: disable stops the client, clears marks and blocks autostart;
--- enable starts it again; reload replaces the client; commands are wired.
 local ctx = ...
 local lifecycle = require 'x18n.lifecycle'
 local ns = require('x18n.decorations').namespace()
 
 if ctx.upstream then
-  -- The published server has no usage counts, so show the value in this lane.
   require('x18n.decorations').setup {
     mode = 'conceal',
     debounce_ms = 100,
@@ -14,7 +11,6 @@ if ctx.upstream then
   }
 end
 
--- -l mode does not source plugin/ scripts; load the command definitions.
 vim.cmd 'runtime! plugin/x18n.lua'
 
 local function clients(bufnr)
@@ -40,7 +36,6 @@ assert(lifecycle.is_enabled() == false, 'is_enabled true after disable')
 assert(marks() == 0, 'marks survived disable')
 assert(vim.wo.conceallevel == 0, 'conceallevel survived disable')
 
--- Autostart stays off for a newly opened buffer.
 vim.cmd('edit ' .. ctx.playground .. '/locales/en.json')
 vim.cmd 'filetype detect'
 ctx.wait_for(function()
@@ -49,7 +44,6 @@ end, 600)
 local ebuf = vim.api.nvim_get_current_buf()
 assert(#clients(ebuf) == 0, 'disabled autostart attached to en.json')
 
--- Enable from the locale buffer.
 assert(lifecycle.enable() == true, 'enable returned false')
 assert(
   ctx.wait_for(function()
@@ -64,7 +58,6 @@ assert(
   'locale EOL marks did not return'
 )
 
--- Reload replaces the client.
 local old_id = clients(ebuf)[1].id
 assert(lifecycle.reload() == true, 'reload returned false')
 assert(
@@ -82,7 +75,6 @@ assert(
   'marks did not return after reload'
 )
 
--- The commands use the same paths.
 vim.cmd 'X18nDisable'
 assert(#clients() == 0, 'X18nDisable left a client')
 vim.cmd 'X18nEnable'

@@ -1,5 +1,3 @@
--- keyInfo resolves the whole call, the closing paren, and the end-of-line
--- annotation. Standard hover stays strict to the key literal.
 local ctx = ...
 if ctx.upstream then
   print 'skipped, needs the x18n fork'
@@ -35,7 +33,6 @@ local function hover_at(target_buf, line0, character)
   }) ~= nil
 end
 
--- main.js line 11 (zero-based 10): export const greeting = t('app.title')
 local line = vim.api.nvim_buf_get_lines(ctx.buf, 10, 11, false)[1]
 assert(line:find 'app%.title', 'fixture lost the app.title call')
 local key_start = line:find "'app%.title'"
@@ -50,9 +47,6 @@ assert(key_at(ctx.buf, 10, #line) == 'app.title', 'line-end keyInfo failed')
 assert(key_at(ctx.buf, 10, key_start - 5) == nil, 'keyInfo before the call resolved a key')
 assert(key_at(ctx.buf, 0, 1) == nil, 'plain line resolved a key')
 
--- A fixture with trailing comments: the expression ends before the line end,
--- so these positions exercise the line-end fallback. The CJK line proves the
--- UTF-16 column conversion; the nested line proves the innermost call wins.
 local temp = ctx.playground .. '/src/hover_edges.js'
 vim.fn.writefile({
   'export function t(key) { return key }',
@@ -109,8 +103,6 @@ assert(key_at(tbuf, 3, inner_close - 1) == 'app.description', 'nested inner pare
 assert(key_at(tbuf, 3, outer_t - 1) == 'app.title', 'outer call start resolved wrong')
 assert(key_at(tbuf, 3, #l3) == nil, 'ambiguous line end resolved a key')
 
--- The plugin popup follows the same keyInfo. The cursor can sit on the last
--- character of the trailing comment, which the line-end fallback covers.
 vim.api.nvim_win_set_cursor(0, { 2, #l1 - 1 })
 assert(require('x18n.actions').show_translations() == true, 'show_translations missed the line-end key')
 assert(
@@ -127,8 +119,6 @@ vim.api.nvim_win_close(popup, true)
 vim.fn.delete(temp)
 pcall(vim.cmd, 'bwipeout! ' .. tbuf)
 
--- Locale files: the EOL annotation sits after the line, so its column is the
--- line length. The single key on the line answers.
 vim.cmd('edit ' .. ctx.playground .. '/locales/en.json')
 vim.cmd 'filetype detect'
 local lbuf = vim.api.nvim_get_current_buf()

@@ -1,7 +1,3 @@
--- Completion: the server answers textDocument/completion inside a t() key
--- slot with the project's keys, each carrying the source value as detail and
--- a textEdit spanning the slot. This is what blink.cmp renders through its
--- lsp source. Completion resolve and all-locale docs ship in x18n 0.1.10.
 local ctx = ...
 
 local function cursor_onto(buf, pattern)
@@ -55,7 +51,6 @@ assert(by_label['app.title'].textEdit, 'no textEdit replacing the key slot')
 local edit = by_label['app.title'].textEdit
 assert(edit.range.start.line == row and edit.range['end'].line == row, 'textEdit not on the slot line')
 
--- The full key survives in data, so resolve can build the all-locale docs.
 local title = by_label['app.title']
 assert(title.data and title.data.key == 'app.title', 'item data lost the full key')
 local function canon(path)
@@ -86,7 +81,6 @@ for _, code in ipairs { '**en**', '**zh-CN**', '**ja**', '**fr**' } do
   assert(doc:find(code, 1, true), 'docs lost locale ' .. code .. ': ' .. doc)
 end
 
--- The description key documents its own translated values too.
 local description = by_label['app.description']
 assert(description and description.data.key == 'app.description', 'app.description lost its full key')
 local description_resolved
@@ -109,7 +103,6 @@ for _, value in ipairs {
   assert(description_doc:find(value, 1, true), 'description docs lost ' .. value .. ': ' .. description_doc)
 end
 
--- Resolve reads data.key, not the label a namespaced project strips.
 local stripped = vim.deepcopy(title)
 stripped.label = 'title'
 stripped.documentation = nil
@@ -128,7 +121,6 @@ assert(
   'resolve used the stripped label: ' .. stripped_resolved.documentation.value
 )
 
--- A stale item names the missing key instead of pretending every locale is untranslated.
 local stale = vim.deepcopy(title)
 stale.data.key = 'app.removed'
 stale.documentation = nil
@@ -147,7 +139,6 @@ assert(
   'stale key docs: ' .. stale_resolved.documentation.value
 )
 
--- A key present only in en resolves with _missing_ for the other locales.
 local set_err, set_done = nil, false
 client:request('workspace/executeCommand', {
   command = 'x18n.set',

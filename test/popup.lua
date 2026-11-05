@@ -1,4 +1,3 @@
--- ShowTranslations popup (all locales for the key) and explain float.
 local ctx = ...
 if ctx.upstream then
   print 'skipped, needs the x18n fork'
@@ -17,7 +16,6 @@ local function cursor_onto(buf, pattern)
   return false
 end
 
--- The native float records itself on the parent buffer.
 local function hover_buf()
   local win = vim.b[ctx.buf].lsp_floating_preview
   if win and vim.api.nvim_win_is_valid(win) then
@@ -46,13 +44,10 @@ assert(text:find('Hello x18n', 1, true), 'popup lost Hello x18n')
 for _, value in ipairs { '你好 x18n', 'こんにちは x18n', 'Bonjour x18n' } do
   assert(text:find(value, 1, true), 'popup lost ' .. value .. ': ' .. text)
 end
--- The reformatted hover: no markdown table pipes, no URL-encoded links.
 assert(not text:find('|', 1, true), 'raw markdown pipes leaked: ' .. text)
 assert(not text:find('%5B', 1, true), 'encoded command link leaked: ' .. text)
 assert(text:find('usage', 1, true), 'usage line missing')
 
--- The float carries a buffer-local copy-key map for the resolved key. Reach it
--- the way a user does: focus the float and press the key.
 local fbuf = hover_buf()
 assert(
   ctx.wait_for(function()
@@ -74,7 +69,6 @@ vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-y>', true, false, true)
 assert(vim.fn.getreg '+' == 'app.title', 'popup copy-key copied: ' .. vim.fn.getreg '+')
 vim.api.nvim_set_current_win(parent_win)
 
--- The native float stays open until the cursor moves in the parent window.
 assert(hover_buf() ~= nil, 'hover float missing before the move')
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
@@ -85,7 +79,6 @@ assert(
   'hover float did not close on cursor move'
 )
 
--- A single-string keymap option is honoured.
 require('x18n').config.translation_popup.keys.copy_key = '<C-g>'
 assert(cursor_onto(ctx.buf, 'app%.title'), 'lost app.title call for the custom map')
 assert(actions.show_translations() == true, 'custom-map popup did not open')
@@ -106,12 +99,9 @@ assert(
 )
 close_hover()
 
--- Off a key: returns false so a keymap can fall through.
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 assert(actions.show_translations() == false, 'show_translations true off-key')
 
--- A key preceded on its own line by multibyte text: the request column must be
--- UTF-16, not a byte offset.
 assert(cursor_onto(ctx.buf, 'app%.description'), 'lost app.description call')
 assert(actions.show_translations() == true, 'UTF-16 position missed the key after CJK text')
 assert(
@@ -131,7 +121,6 @@ for _, value in ipairs {
 end
 close_hover()
 
--- explain and status ride the native float with close_events = {} (stay open)
 local function float_with(content_pattern)
   for _, w in ipairs(vim.api.nvim_list_wins()) do
     local cfg = vim.api.nvim_win_get_config(w)

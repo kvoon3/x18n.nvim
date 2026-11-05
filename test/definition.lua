@@ -1,10 +1,6 @@
--- Definition: the key's locale definitions open the quickfix, the same list
--- as grr, and the chosen entry jumps. A single definition jumps directly.
--- Off a key or without a client nothing is jumped.
 local ctx = ...
 local actions = require 'x18n.actions'
 
--- -l mode does not source plugin/ scripts.
 vim.cmd 'runtime! plugin/x18n.lua'
 
 local function cursor_onto(pattern)
@@ -34,11 +30,8 @@ end
 
 local main = ctx.playground .. '/src/main.js'
 
--- Display locale en, but pick fr from the list.
 vim.cmd('edit ' .. main)
 vim.cmd 'filetype detect'
---[[ A root_dir function resolves after the buffer reload; wait for the client
-  to re-attach instead of racing the scheduled start. ]]
 assert(
   ctx.wait_for(function()
     return #vim.lsp.get_clients { bufnr = 0, name = 'x18n' } > 0
@@ -83,7 +76,6 @@ assert(
 )
 assert(vim.api.nvim_get_current_line():find('Bonjour x18n', 1, true), 'definition landed on the wrong fr value')
 
--- Display locale ja, but pick zh-CN: the list does not follow the display.
 vim.cmd('edit ' .. main)
 actions.set_display_locale 'ja'
 assert(
@@ -121,7 +113,6 @@ assert(
 )
 assert(vim.api.nvim_get_current_line():find('你好 x18n', 1, true), 'definition landed on the wrong zh-CN value')
 
--- The key after CJK text exercises the UTF-16 request column.
 vim.cmd('edit ' .. main)
 vim.cmd 'filetype detect'
 assert(cursor_onto 'app%.description', 'lost app.description call')
@@ -138,8 +129,6 @@ assert(
   'CJK definition landed on the wrong value'
 )
 
--- A key present in one locale only skips the quickfix. The cursor lives in a
--- code file, so the jump has to move it to en.json for real.
 local client = vim.lsp.get_clients({ name = 'x18n' })[1]
 local set_err, set_done = nil, false
 client:request('workspace/executeCommand', {
@@ -204,7 +193,6 @@ assert(vim.api.nvim_get_current_line():find('only_en', 1, true), 'one-definition
 vim.fn.delete(temp)
 pcall(vim.cmd, 'bwipeout! ' .. tempbuf)
 
--- Off a key, and without a client, the action declines so gd can fall back.
 vim.cmd('edit ' .. main)
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 vim.fn.setqflist {}

@@ -1,9 +1,5 @@
 local M = {}
 
---- Progress per locale as "en 3/3" style short lines.
----@param project table ProjectInfo
----@param progress table? ProgressResult
----@return string[]
 local function locale_lines(project, progress)
   local coverage = {}
   if progress then
@@ -64,8 +60,6 @@ function M.show()
     lines[#lines + 1] = '  show mode ' .. decorations.get_mode()
     lines[#lines + 1] = '  locale-file EOL ' .. (decorations.locale_file_eol() and 'on' or 'off')
   end
-  --[[ The native float without close events: status stays until dismissed,
-    and the border comes from the user's config, not from here. ]]
   vim.lsp.util.open_floating_preview(lines, nil, {
     focus_id = 'x18n/status',
     close_events = {},

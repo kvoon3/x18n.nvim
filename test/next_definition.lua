@@ -1,5 +1,3 @@
--- Next-locale definition: the server reports locales as en, fr, ja, zh-CN;
--- each jump lands on the next locale file for the key, with wrap.
 local ctx = ...
 local actions = require 'x18n.actions'
 
@@ -28,8 +26,6 @@ end
 local order = require('x18n.locales').locales()
 assert(#order == 4 and order[1] == 'en', 'unexpected locale order: ' .. table.concat(order, ','))
 
--- From the code file the first jump lands on the source locale, then each
--- locale in the server's order, then wraps.
 assert(cursor_onto(ctx.buf, 'app%.title'), 'lost app.title call')
 actions.next_definition()
 assert(
@@ -61,7 +57,6 @@ assert(
 )
 assert(vim.api.nvim_get_current_line():find(titles[order[1]], 1, true), 'wrap landed on the wrong value')
 
--- From inside a locale file, onto the key line.
 assert(cursor_onto(vim.api.nvim_get_current_buf(), 'title'), 'lost title key in ' .. order[1] .. '.json')
 actions.next_definition()
 assert(

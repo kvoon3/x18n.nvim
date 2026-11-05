@@ -1,6 +1,6 @@
--- Locale pairing: keyInfo reports which locales define the key, so a key
--- present in only some locales is paired with the right file. The server no
--- longer labels implementation locations with a non-standard data field.
+--[[ Locale pairing: keyInfo reports which locales define the key, so a key
+  present in only some locales is paired with the right file. The server no
+  longer labels implementation locations with a non-standard data field. ]]
 local ctx = ...
 if ctx.upstream then
   print 'skipped, needs the x18n fork'
@@ -57,7 +57,6 @@ for _, code in ipairs { 'en', 'zh-CN', 'ja', 'fr' } do
   assert(codes[code], 'labels do not cover ' .. code)
 end
 
--- A key that exists in only two locales must not be paired by raw index.
 local fake = {
   request = function(_, method, _, on_result)
     if method == 'x18n/keyInfo' then
@@ -91,7 +90,6 @@ assert(#fake_pairs == 2, 'expected two paired locations, got ' .. #fake_pairs)
 assert(fake_pairs[1].code == 'en', 'first location paired with ' .. tostring(fake_pairs[1].code))
 assert(fake_pairs[2].code == 'fr', 'second location paired with ' .. tostring(fake_pairs[2].code))
 
--- A count mismatch leaves every label out instead of guessing.
 local mismatched = vim.deepcopy(fake)
 mismatched.request = function(_, method, _, on_result)
   if method == 'x18n/keyInfo' then

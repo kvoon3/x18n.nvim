@@ -1,6 +1,3 @@
--- Locale files: EOL virtual text shows the usage count by default. The
--- display-locale value is opt-in when counts are available, and the automatic
--- fallback when the server cannot report counts (the published server).
 local ctx = ...
 local decorations = require 'x18n.decorations'
 local ns = decorations.namespace()
@@ -18,8 +15,8 @@ assert(
   'locale file got no EOL decorations'
 )
 
--- The code buffer raised conceallevel to hide its keys; the locale file must
--- get the user's level back, or JSON quotes vanish under conceallevel=2.
+--[[ The code buffer raised conceallevel to hide its keys; the locale file must
+  get the user's level back, or JSON quotes vanish under conceallevel=2. ]]
 assert(
   ctx.wait_for(function()
     return vim.wo.conceallevel == 0
@@ -35,11 +32,9 @@ for _, m in ipairs(marks) do
 end
 local joined = table.concat(texts, '\n')
 if ctx.upstream then
-  -- Auto mode falls back to the value when the server has no usage counts.
   assert(joined:find('Hello x18n', 1, true), 'expected en value at EOL: ' .. joined)
   assert(not joined:find('usage', 1, true), 'upstream EOL text claims a usage badge: ' .. joined)
 else
-  -- With counts available, auto shows the usage badge and not the value.
   assert(joined:find('1 usage', 1, true), 'expected usage badges at EOL: ' .. joined)
   assert(not joined:find('Hello x18n', 1, true), 'default EOL annotation should not repeat the value: ' .. joined)
 end
@@ -69,9 +64,6 @@ if not ctx.upstream then
   )
 end
 
--- Switching the display locale re-renders the locale file with that locale's
--- values. The server lists locales in its own order, so derive the next code
--- and value instead of assuming zh-CN follows en.
 local display_values = {
   en = { 'Hello x18n', 'A playground for x18n.nvim' },
   fr = { 'Bonjour x18n', 'Un terrain de jeu pour x18n.nvim' },
@@ -99,7 +91,6 @@ assert(
   'EOL decorations did not follow display locale to ' .. next_locale
 )
 
--- The locale-file EOL translation is independent of the translation overlay.
 assert(decorations.toggle_locale_file_eol() == false, 'EOL toggle should report off')
 assert(
   ctx.wait_for(function()
@@ -118,7 +109,6 @@ assert(
   'EOL translations did not return after toggle on'
 )
 
--- Usage badges are a separate switch.
 decorations.setup {
   mode = 'conceal',
   debounce_ms = 100,
@@ -136,7 +126,6 @@ assert(
   'show_locale_file_eol_usage=false did not drop the badge: ' .. eol_text()
 )
 
--- An explicit false wins over the automatic fallback, on both servers.
 decorations.setup {
   mode = 'conceal',
   debounce_ms = 100,
@@ -152,8 +141,6 @@ assert(
   'show_locale_file_eol_translation=false did not drop the value: ' .. eol_text()
 )
 
--- Switching back to the code buffer raises the level again, and leaving it for
--- a plain buffer puts it back.
 vim.cmd('edit ' .. ctx.playground .. '/src/main.js')
 vim.cmd 'filetype detect'
 assert(

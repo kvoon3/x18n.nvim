@@ -1,6 +1,6 @@
--- The hover markdown: the server omits VS Code command links unless the client
--- lists them in init_options.hoverCommands (this plugin lists none). Standard
--- hover stays upstream's table; the plugin popup uses x18n/keyInfo instead.
+--[[ The hover markdown: the server omits VS Code command links unless the client
+  lists them in init_options.hoverCommands (this plugin lists none). Standard
+  hover stays upstream's table; the plugin popup uses x18n/keyInfo instead. ]]
 local ctx = ...
 local client = vim.lsp.get_clients({ name = 'x18n' })[1]
 assert(client, 'no client')

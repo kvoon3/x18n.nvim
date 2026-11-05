@@ -1,7 +1,3 @@
--- Conceal mode: away from the cursor the key literal reads as its value; on
--- the cursor's line the raw key shows with an end-of-line arrow. Missing keys
--- keep yielding to the diagnostic; the conceallevel we raise comes back on
--- toggle-off.
 local ctx = ...
 local decorations = require 'x18n.decorations'
 local ns = decorations.namespace()
@@ -52,7 +48,6 @@ local function shape(row)
   return 'none'
 end
 
--- Cursor starts on line 1, away from every t() call: all ok keys concealed.
 assert(
   ctx.wait_for(function()
     return shape(greeting) == 'concealed'
@@ -61,7 +56,6 @@ assert(
 )
 assert(vim.wo.conceallevel == 2, 'conceallevel not raised')
 
--- The conceal range covers the quoted literal including quotes.
 local line = vim.api.nvim_buf_get_lines(ctx.buf, greeting, greeting + 1, false)[1]
 local quote_at = line:find("'", 1, true)
 for _, m in ipairs(marks()) do
@@ -70,7 +64,6 @@ for _, m in ipairs(marks()) do
   end
 end
 
--- Missing key yields to the diagnostic, so no mark at all on its line.
 assert(
   ctx.wait_for(function()
     local has_diag = false
@@ -84,7 +77,6 @@ assert(
   'missing key did not yield to the diagnostic: ' .. shape(broken)
 )
 
--- Moving onto the line swaps it to the raw-key-plus-eol-arrow shape.
 vim.api.nvim_win_set_cursor(0, { greeting + 1, 10 })
 vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
 assert(
@@ -101,7 +93,6 @@ for _, m in ipairs(marks()) do
 end
 assert(eol_text == '→ Hello x18n', 'eol arrow text wrong: ' .. tostring(eol_text))
 
--- Moving away restores the concealed shape.
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
 assert(
@@ -111,11 +102,9 @@ assert(
   'line did not return to the concealed shape: ' .. shape(greeting)
 )
 
--- Toggle-off clears marks and restores the conceallevel.
 decorations.toggle()
 assert(vim.wo.conceallevel == 0, 'conceallevel not restored')
 
--- Back to inline: arrows return, nothing concealed.
 decorations.setup { mode = 'inline', debounce_ms = 100 }
 decorations.refresh_attached()
 assert(

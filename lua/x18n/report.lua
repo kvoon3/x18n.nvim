@@ -22,7 +22,6 @@ local function qf_item(entry, kind, label, loc)
   return item
 end
 
---- Missing entries carry every usage site; unused entries carry one definition.
 local function entry_items(entry, kind, label)
   local locations = entry.locations or (entry.location and { entry.location }) or {}
   if #locations == 0 then

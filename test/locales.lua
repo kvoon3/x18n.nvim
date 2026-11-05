@@ -1,5 +1,3 @@
--- Locale cycling: the server reports locales as en, fr, ja, zh-CN; next()
--- walks that order and wraps. The values are derived from the reported list.
 local ctx = ...
 local decorations = require 'x18n.decorations'
 

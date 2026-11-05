@@ -1,6 +1,3 @@
--- A locale file opened while the server is still building its first index gets
--- an empty x18n/fileKeys reply. The plugin must retry before caching the file
--- as plain, or the badges never appear.
 local ctx = ...
 local decorations = require 'x18n.decorations'
 local ns = decorations.namespace()

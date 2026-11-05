@@ -1,4 +1,3 @@
--- Status: float lists project, locales with progress, display locale.
 local ctx = ...
 require('x18n.status').show()
 
@@ -39,7 +38,6 @@ for _, code in ipairs { 'en', 'zh-CN', 'ja', 'fr' } do
   assert(not found:find('missing', 1, true), code .. ' reports missing keys: ' .. found)
 end
 assert(text:find('source', 1, true), 'source locale marker missing: ' .. text)
--- Every fixture key is translated in every locale; missing counts appear when >0.
 assert(text:find('display locale', 1, true), 'display locale missing: ' .. text)
 assert(text:find('show mode conceal', 1, true), 'show mode missing: ' .. text)
 local eol = require('x18n.decorations').locale_file_eol()

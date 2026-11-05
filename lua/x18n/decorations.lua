@@ -5,17 +5,17 @@ local util = require 'x18n.util'
 local ns = vim.api.nvim_create_namespace 'x18n_decoration'
 local cfg = {}
 local enabled = false
-local pending = {} -- bufnr -> uv timer
-local retries = {} -- bufnr -> warm-up poll count
-local locale_files = {} -- bufnr -> true once fileKeys proved it is a locale file
-local plain_files = {} -- bufnr -> true once a warm server proved it holds no keys
-local results = {} -- bufnr -> last decorations reply, for cursor-line redraws
-local cursor_timer = nil -- CursorMoved debounce
-local baseline = {} -- winid -> the conceallevel the user had before we raised it
-local raised = {} -- winid -> true while we want conceallevel 2 in that window
-local last_baseline = nil -- the level a new split should start from
-local locale_eol_translation = true -- nil = auto: show the value when usage counts are absent
-local locale_eol_value_shown = false -- effective state of the last locale render
+local pending = {}
+local retries = {}
+local locale_files = {}
+local plain_files = {}
+local results = {}
+local cursor_timer = nil
+local baseline = {}
+local raised = {}
+local last_baseline = nil
+local locale_eol_translation = true
+local locale_eol_value_shown = false
 local locale_eol_usage = true
 
 local function define_highlights()
@@ -33,11 +33,6 @@ local function hl_for(state)
   return 'WarningMsg'
 end
 
---[[ One row per display mode. Each row answers four questions: hide the key
-  literal away from the cursor, show the value away from the cursor, what the
-  cursor's line shows, and where a visible value sits. `conceal` is the local
-  default; `both`, `translation`, `translation_conceal` and `origin` are the
-  i18n.nvim names, so a user can switch without relearning the model. ]]
 local MODES = {
   both = { conceal = false, value = 'always', cursor = 'inline', pos = 'inline', cursor_dependent = false },
   translation = { conceal = true, value = 'always', cursor = 'inline', pos = 'inline', cursor_dependent = true },
@@ -50,8 +45,6 @@ MODES.inline = MODES.both
 
 local last_non_origin = 'conceal'
 
----@param mode string
----@return string canonical
 local function canonical(mode)
   if mode == 'inline' then
     return 'both'
@@ -69,10 +62,6 @@ local function clear(bufnr)
   end
 end
 
---- Buffers the client is attached to. `vim.lsp.get_buffers_by_client_id` is
---- deprecated on 0.12; the attached-buffers lookup is its replacement.
----@param client vim.lsp.Client
----@return integer[]
 local function buffers_of(client)
   local out = {}
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
@@ -83,10 +72,6 @@ local function buffers_of(client)
   return out
 end
 
---- Conceal needs 'conceallevel' >= 2 in every window showing the buffer. The
---- baseline is recorded once per window and survives restores, so a later
---- render that finds a level of 2 (our own earlier raise) does not mistake it
---- for the user's setting.
 local function ensure_conceallevel(bufnr)
   for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
     if baseline[win] == nil then
@@ -100,7 +85,6 @@ local function ensure_conceallevel(bufnr)
   end
 end
 
----@param win integer
 local function restore_window(win)
   if not raised[win] then
     return
@@ -111,7 +95,6 @@ local function restore_window(win)
   end
 end
 
---- Put the conceallevel of every window we raised back to its baseline.
 local function restore_conceallevel()
   local wins = {}
   for win in pairs(raised) do
@@ -122,9 +105,6 @@ local function restore_conceallevel()
   end
 end
 
---- Restore only the windows currently showing this buffer. Locale files do not
---- conceal anything, so they must not inherit a code buffer's raised level when
---- the window switches to them.
 local function restore_conceallevel_for(bufnr)
   local wins = {}
   for win in pairs(raised) do
@@ -137,9 +117,6 @@ local function restore_conceallevel_for(bufnr)
   end
 end
 
---- True when this buffer renders with the key concealed right now.
----@param bufnr integer
----@return boolean
 local function needs_conceal(bufnr)
   return enabled
     and cfg.debounce_ms ~= nil
@@ -149,10 +126,6 @@ local function needs_conceal(bufnr)
     and not plain_files[bufnr]
 end
 
---- Reconcile the current window with the buffer it shows. A window that still
---- shows a concealed buffer keeps its level; a raised plain window gets its
---- baseline back.
----@param bufnr integer
 local function reconcile_window(bufnr)
   if needs_conceal(bufnr) then
     return
@@ -173,31 +146,21 @@ local function reset_inherited_window(bufnr)
   end
 end
 
---- Widen the conceal range over the quote characters around the key literal,
---- so `t('app.title')` reads `t(Hello)` and not `t('Hello')`. The server range
---- is half-open [s_col, e_col); a quote just before it and just after it means
---- quotes are not part of the range.
----@return integer s_line, integer s_col, integer e_line, integer e_col
-local function quoted_range(bufnr, range)
+local function widen_over_quotes(bufnr, range)
   local s_line, s_col = util.to_byte(bufnr, range.start)
   local e_line, e_col = util.to_byte(bufnr, range['end'])
   if s_line ~= e_line then
     return s_line, s_col, e_line, e_col
   end
   local line = vim.api.nvim_buf_get_lines(bufnr, s_line, s_line + 1, false)[1] or ''
-  --[[ Byte columns are 0-based, Lua sub is 1-based: the char before the range
-    start is 1-based s_col, the char at the exclusive end is 1-based e_col + 1. ]]
-  local before = line:sub(s_col, s_col)
-  local after = line:sub(e_col + 1, e_col + 1)
-  if before:match '[\'"`]' and after:match '[\'"`]' then
-    s_col = s_col - 1
-    e_col = e_col + 1
+  local quote_before = line:sub(s_col, s_col)
+  local quote_after = line:sub(e_col + 1, e_col + 1)
+  if quote_before:match '[\'"`]' and quote_after:match '[\'"`]' then
+    return s_line, s_col - 1, e_line, e_col + 1
   end
   return s_line, s_col, e_line, e_col
 end
 
---- The cursor's line in the current window, or -1 when the window shows
---- another buffer. Conceal mode renders that line differently.
 local function cursor_line(bufnr)
   if vim.api.nvim_win_get_buf(0) ~= bufnr then
     return -1
@@ -205,15 +168,8 @@ local function cursor_line(bufnr)
   return vim.api.nvim_win_get_cursor(0)[1] - 1
 end
 
--- Line numbers (0-based) carrying an x18n missing-key diagnostic this render.
 local missing_diag_lines = {}
 
---- True when the server already publishes this decoration's missing key as a
---- diagnostic on the same line, so the virtual-text arrow would be a repeat.
---- False while no x18n diagnostic has landed yet, so the arrow keeps signaling
---- the problem until the diagnostic replaces it.
----@param bufnr integer
----@param d table Decoration
 local function has_missing_diagnostic(bufnr, d)
   local lines = missing_diag_lines[bufnr]
   if not lines then
@@ -227,9 +183,6 @@ local function has_missing_diagnostic(bufnr, d)
   return lines[line] == true
 end
 
---- Rebuild the per-buffer missing-diagnostic line index. Called before every
---- render pass; diagnostics arrive asynchronously with the server's changes.
----@return boolean true when the buffer carries any x18n diagnostic
 local function index_missing_diagnostics(bufnr)
   local lines = {}
   for _, diag in ipairs(vim.diagnostic.get(bufnr)) do
@@ -377,16 +330,9 @@ local function render(bufnr, result)
     ensure_conceallevel(bufnr)
   end
   for _, d in ipairs(result and result.decorations or {}) do
-    --[[ The server publishes a missing-key finding as a diagnostic on the same
-      line; printing it a second time as virtual text only adds noise. ]]
     local skip = d.state == 'missing' and has_missing_diagnostic(bufnr, d)
     if not skip and p.conceal and d.state == 'ok' and d.value and d.value ~= '' and d.range then
-      --[[ Two shapes per key, swapped by a cursor-line redraw: away from the
-        cursor the concealed literal is replaced by its value inline; on the
-        cursor's line the raw key shows (conceal always reveals there) and the
-        value follows the mode's cursor rule. Static extmarks cannot switch by
-        themselves, so CursorMoved re-renders from the cached result. ]]
-      local s_line, s_col, e_line, e_col = quoted_range(bufnr, d.range)
+      local s_line, s_col, e_line, e_col = widen_over_quotes(bufnr, d.range)
       vim.api.nvim_buf_set_extmark(bufnr, ns, s_line, s_col, {
         end_line = e_line,
         end_col = e_col,
@@ -415,11 +361,8 @@ local function render(bufnr, result)
         })
       end
     elseif not skip then
-      --[[ Some usages (directives, template pipes) have no enclosing call, so
-        the server sends only the key range. Put the marker after that. ]]
       local expression = d.expression or d.range
       local line, col = util.to_byte(bufnr, expression['end'])
-      --[[ translation_conceal leaves the cursor line raw only. ]]
       local on_cursor = p.cursor_dependent and line == cur
       if not (on_cursor and p.cursor == 'none') then
         local text = (d.value and d.value ~= '') and (' → ' .. d.value) or (' → ' .. (d.state or 'missing'))
@@ -433,9 +376,6 @@ local function render(bufnr, result)
   end
 end
 
---- Locale files get no inline decorations from the server; x18n/fileKeys gives
---- their keys, so park the display-locale value and the usage count at the end
---- of each key's line. Either segment can be switched off independently.
 local function usage_label(n)
   if n == 0 then
     return 'no usages'
@@ -456,9 +396,6 @@ local function render_locale_file(bufnr, result)
   clear(bufnr)
   restore_conceallevel_for(bufnr)
   local keys = result and result.keys or {}
-  --[[ The published server has no usages in x18n/fileKeys, so the default
-    usage badge would leave locale files with no annotation at all. Auto mode
-    falls back to the display-locale value, which proves the file is detected. ]]
   local has_usages = false
   for _, k in ipairs(keys) do
     if k.usages ~= nil then
@@ -490,12 +427,6 @@ local function render_locale_file(bufnr, result)
   end
 end
 
---- Ask the server for the keys of a file. Calls back with the key list when the
---- file holds locale definitions, and with nil when it does not (a code file, or
---- the server still indexing). Without a callback it renders a known locale file.
----@param bufnr integer
----@param client vim.lsp.Client
----@param on_result fun(keys: table[]?)? nil for the plain render path
 local function request_file_keys(bufnr, client, on_result)
   client:request('x18n/fileKeys', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
     require('x18n').debug(
@@ -516,13 +447,6 @@ local function request_file_keys(bufnr, client, on_result)
   end)
 end
 
---[[ An empty x18n/fileKeys reply is also what a probe that races the server's
-  first index looks like. Poll with backoff before caching the file as plain,
-  so a locale file opened during indexing still gets its badges. Returns false
-  once the budget is spent. ]]
----@param bufnr integer
----@param client vim.lsp.Client
----@return boolean retried
 local function retry_warm_up(bufnr, client)
   local attempt = retries[bufnr] or 0
   if attempt >= 5 then
@@ -575,11 +499,6 @@ function M.request(bufnr, client)
           render(bufnr, result)
         end)
       end
-      --[[ No decorations: either the server is still loading, the file simply has
-        no translate calls, or it is a locale file, which the server only answers
-        through x18n/fileKeys. A plain (key-less) file is remembered so later
-        refreshes skip the probe; the warm-up signature is empty keys plus an
-        empty locale. ]]
       if plain_files[bufnr] then
         return
       end
@@ -592,9 +511,6 @@ function M.request(bufnr, client)
             render_locale_file(bufnr, { keys = keys })
           end)
         end
-        --[[ The server looks warm (a locale came back) but the file has no
-          keys: either it is genuinely plain or the index that answers
-          x18n/fileKeys is still landing. Retry before deciding. ]]
         if retry_warm_up(bufnr, client) then
           return
         end
@@ -630,12 +546,10 @@ function M.refresh_attached()
   end
 end
 
---- Exposed for tests.
 function M.namespace()
   return ns
 end
 
---- Exposed for tests.
 function M.state()
   return {
     baseline = vim.deepcopy(baseline),
@@ -657,6 +571,8 @@ function M.clear_all()
   pending = {}
   results = {}
   retries = {}
+  locale_files = {}
+  plain_files = {}
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(bufnr) then
       clear(bufnr)
@@ -668,7 +584,6 @@ function M.clear_all()
   raised = {}
 end
 
---- Redraw one buffer from its cached result, for the cursor-line swap.
 local function redraw(bufnr)
   local result = results[bufnr]
   if result and vim.api.nvim_buf_is_loaded(bufnr) then
@@ -734,8 +649,6 @@ function M.setup(opts)
       M.refresh(a.buf)
     end,
   })
-  --[[ A split inherits the source window's options, including a conceallevel
-    this module raised. Start every new plain window at the level we found. ]]
   aug('WinNew', {
     group = group,
     callback = function()
@@ -743,8 +656,6 @@ function M.setup(opts)
       if vim.api.nvim_win_get_config(win).relative ~= '' then
         return
       end
-      --[[ The split inherits the source window's current options. Prefer the
-        source window's recorded baseline over the global last-seen one. ]]
       local previous = vim.fn.win_getid(vim.fn.winnr '#')
       local level = baseline[previous] or last_baseline
       if level ~= nil then
@@ -776,8 +687,6 @@ function M.setup(opts)
     end,
   })
   aug('ColorScheme', { group = group, callback = define_highlights })
-  --[[ Modes can switch at runtime, so the cursor-line machinery is always
-    registered and decides per redraw whether the current mode needs it. ]]
   local on_move = function(bufnr)
     if not plan().cursor_dependent then
       return

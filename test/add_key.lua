@@ -1,7 +1,5 @@
--- Add key: cursor on the missing-key call, per-locale inputs, x18n.set writes.
 local ctx = ...
 
--- Cursor onto the key literal of t('app.missing.key').
 local function cursor_onto(pattern)
   for i, l in ipairs(vim.api.nvim_buf_get_lines(ctx.buf, 0, -1, false)) do
     local col = l:find(pattern, 1, false)
@@ -67,14 +65,11 @@ assert(
   'add-key success notification never arrived'
 )
 
--- Refuse to overwrite: an existing key must not enter the flow.
 asked = {}
 assert(cursor_onto 'app%.title', 'fixture lost app.title')
 require('x18n.add_key').run()
 assert(#asked == 0, 'existing key entered the add flow')
 
--- An explicit brand-new key (used nowhere) goes through; an explicit existing
--- one is refused by the tree check.
 asked = {}
 require('x18n.add_key').run 'brand.new.key'
 assert(#asked == #order, 'explicit new key did not reach the per-locale inputs: ' .. #asked)

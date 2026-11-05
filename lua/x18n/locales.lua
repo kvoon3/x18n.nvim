@@ -1,6 +1,5 @@
 local M = {}
 
--- Cache of the projects/locales reply, refreshed on demand.
 local info = nil
 local warming = false
 local display_override = nil
@@ -23,7 +22,6 @@ function M.warm()
 end
 
 --- Fetch project info (locales, display locale) from the server, blocking briefly.
---- Cached: the locale list only changes when the config changes.
 ---@param force boolean? Re-fetch even when cached.
 ---@return table? projects
 function M.projects(force)
@@ -128,8 +126,6 @@ function M.key_locations(client, uri, position, on_result)
             codes[#codes + 1] = locale.code
           end
         end
-        --[[ A server that reports a different count cannot be paired by index.
-          Leave the codes out rather than label a definition with the wrong one. ]]
         if #codes ~= #locations then
           codes = nil
         end
@@ -175,7 +171,7 @@ function M.next()
   end
   local next_locale = locales[idx % #locales + 1]
   require('x18n.actions').set_display_locale(next_locale)
-  -- setDisplayLocale changes what the server reports back; refill without blocking.
+  --[[ setDisplayLocale changes what the server reports back; refill without blocking. ]]
   info = nil
   M.warm()
   return next_locale

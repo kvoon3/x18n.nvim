@@ -3,8 +3,6 @@ local M = {}
 local util = require 'x18n.util'
 local locales = require 'x18n.locales'
 
---- All keys of the workspace from the server's symbol index.
----@param on_result fun(entries: {key: string, value: string, location: table?}[])
 local function list(client, on_result)
   client:request('workspace/symbol', { query = '' }, function(err, result)
     if err then
@@ -28,7 +26,6 @@ local function list(client, on_result)
   end)
 end
 
---- The key details for a key, when the server provides them.
 local function key_info(client, entry, on_result)
   if not entry.location then
     return on_result(nil)
@@ -36,8 +33,6 @@ local function key_info(client, entry, on_result)
   locales.key_info(client, entry.location.uri, entry.location.range.start, on_result)
 end
 
---- Every locale definition of the key, paired with its locale code.
----@param on_result fun(pairs: {code: string?, location: table}[], info: table?)
 local function locale_locations(client, entry, on_result)
   if not entry.location then
     return on_result({}, nil)
@@ -142,8 +137,6 @@ local actions = {
           items[#items + 1] = { code = code, location = by_code[code] }
         end
       else
-        --[[ The server has no locale labels. Offer the definition files by name
-          instead of guessing which locale each one holds. ]]
         for _, pair in ipairs(pairs) do
           items[#items + 1] = {
             code = vim.fn.fnamemodify(vim.uri_to_fname(pair.location.uri), ':t'),

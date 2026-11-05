@@ -1,5 +1,3 @@
--- Diagnostics: false clears and suppresses the server's diagnostics, which
--- brings the missing-key arrow back; a table is forwarded to the namespace.
 local ctx = ...
 local init = require 'x18n'
 local lsp = require 'x18n.lsp'
@@ -49,8 +47,6 @@ assert(
   'missing arrow did not return with diagnostics off'
 )
 
--- A later publish is filtered too. Count publishes so the assertion cannot
--- pass just because the server never answered.
 local active = client()
 local original_handler = active.handlers['textDocument/publishDiagnostics']
 local publishes = 0
@@ -85,7 +81,6 @@ assert(
   'arrow did not yield to the restored diagnostic'
 )
 
--- A table forwards to the diagnostic namespace.
 init.config.diagnostic = { virtual_text = false, signs = false }
 lsp.apply_diagnostics(client())
 local shown = vim.diagnostic.config(nil, vim.lsp.diagnostic.get_namespace(client().id))

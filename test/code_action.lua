@@ -1,10 +1,5 @@
--- Ctrl+. on an x18n key lists one add action per missing locale. It works on
--- the code usage, and on the missing-translation warning line in a locale file.
--- Only the chosen locale is written; the native code actions are the fallback.
 local ctx = ...
 if ctx.upstream then
-  -- The client-built per-locale menu needs keyInfo. Without it the action
-  -- declines, so Ctrl+. runs the native code actions.
   assert(require('x18n.actions').code_action() == false, 'code_action should decline without keyInfo')
   print 'code action fallback ok'
   return
@@ -26,8 +21,6 @@ assert(cursor_onto 'app%.missing%.key', 'fixture lost the missing-key call')
 
 local actions, wanted
 vim.ui.select = function(items, opts, on_choice)
-  --[[ Picker-specific hints (snacks' kind='codeaction') change how the items
-    are interpreted; these are plain client-built entries, so none may ride. ]]
   assert(opts and opts.kind == nil, 'picker-specific kind leaked: ' .. tostring(opts and opts.kind))
   actions = items
   if wanted then
@@ -69,7 +62,6 @@ local function key_lines(code)
   return table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), '\n')
 end
 
--- The source is missing: all four locales are offered.
 wanted = 'Add "app.missing.key" to en'
 local first = menu()
 for _, locale in ipairs { 'en', 'fr', 'ja', 'zh-CN' } do
@@ -83,9 +75,6 @@ assert(
   'en.json never received the code action value'
 )
 
--- The code usage has no diagnostic now, but the plugin still lists the three
--- remaining locales instead of disappearing. The server index updates after the
--- edit, so retry until the en action drops out.
 wanted = nil
 local second
 assert(
@@ -100,7 +89,6 @@ for _, locale in ipairs { 'fr', 'ja', 'zh-CN' } do
 end
 assert(not second:find('Add empty values in', 1, true), 'empty-value action leaked: ' .. second)
 
--- The missing-translation warning in en.json offers the same actions.
 vim.cmd('edit ' .. ctx.playground .. '/locales/en.json')
 vim.cmd 'filetype detect'
 local enbuf = vim.api.nvim_get_current_buf()

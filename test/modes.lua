@@ -1,5 +1,3 @@
--- Display modes: i18n.nvim's four names plus the local ones, the cursor-line
--- rule for each, and the two toggle transition tables.
 local ctx = ...
 local decorations = require 'x18n.decorations'
 local ns = decorations.namespace()
@@ -56,7 +54,6 @@ local function wait_shape(mode, want)
   )
 end
 
--- Cursor away from every key: line 1.
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
 vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
 assert(
@@ -91,7 +88,6 @@ decorations.set_mode 'eol'
 wait_shape('eol', { conceal = 0, eol_value = ' → Hello x18n' })
 assert(vim.wo.conceallevel == 0, 'eol left conceallevel raised')
 
--- Cursor line rules.
 vim.api.nvim_win_set_cursor(0, { greeting + 1, 10 })
 vim.api.nvim_exec_autocmds('CursorMoved', { buffer = ctx.buf })
 
@@ -113,7 +109,6 @@ wait_shape('conceal cursor', { conceal = 1, eol_value = '→ Hello x18n' })
 decorations.set_mode 'both'
 wait_shape('both cursor', { conceal = 0, inline_value = ' → Hello x18n' })
 
--- Toggle transitions, mirroring i18n.nvim.
 decorations.set_mode 'both'
 assert(decorations.toggle_origin() == 'translation_conceal', 'both did not toggle origin off')
 assert(decorations.toggle_origin() == 'both', 'translation_conceal did not toggle origin on')

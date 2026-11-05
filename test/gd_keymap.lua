@@ -1,6 +1,3 @@
--- gd keymap: the plugin binds it per x18n buffer, opens the locale
--- definitions quickfix on a key, and keeps the previous definition binding
--- elsewhere. A later client's plain gd is reclaimed without wrapping the chain.
 local ctx = ...
 local actions = require 'x18n.actions'
 
@@ -27,7 +24,6 @@ assert(
 local map = vim.fn.maparg('gd', 'n', false, true)
 assert(map.desc and map.desc:find('x18n', 1, true), 'gd desc: ' .. tostring(map.desc))
 
--- On the key: the locale definitions quickfix, then the chosen jump.
 vim.api.nvim_win_set_cursor(0, { 11, 30 })
 map.callback()
 local list = qf()
@@ -37,7 +33,6 @@ select_qf(2)
 assert(vim.api.nvim_buf_get_name(0):find('fr.json', 1, true), 'gd did not jump to fr: ' .. vim.api.nvim_buf_get_name(0))
 assert(vim.api.nvim_get_current_line():find('Bonjour x18n', 1, true), 'gd landed on the wrong value')
 
--- Off the key: the captured definition binding.
 vim.cmd('edit ' .. ctx.playground .. '/src/main.js')
 vim.cmd 'filetype detect'
 vim.api.nvim_win_set_cursor(0, { 1, 0 })
@@ -51,8 +46,6 @@ map.callback()
 vim.lsp.buf.definition = original
 assert(defined == 1, 'gd off-key did not fall back to definition: ' .. defined)
 
--- A later client's LspAttach rebinds gd plain; the x18n re-chain reclaims it
--- and keeps the original fallback instead of wrapping the clobber.
 vim.keymap.set('n', 'gd', original, { buffer = ctx.buf, desc = 'plain clobber' })
 actions.default_keymaps(ctx.buf)
 map = vim.fn.maparg('gd', 'n', false, true)
