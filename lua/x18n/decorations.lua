@@ -2,63 +2,268 @@ local M = {}
 
 local util = require 'x18n.util'
 
+---@alias x18n.ShowMode 'both'|'translation'|'translation_conceal'|'origin'|'conceal'|'eol'
+---@alias x18n.ModeInput x18n.ShowMode|'inline'
+---@alias x18n.CursorRule 'same'|'inline_arrow'|'eol_arrow'|'hidden'
+---@alias x18n.VirtPos 'inline'|'eol'
+
+---@class x18n.ModeRule
+---@field conceal boolean
+---@field shows boolean
+---@field cursor x18n.CursorRule
+---@field pos x18n.VirtPos
+
+---@class x18n.Decoration
+---@field key string?
+---@field state string?
+---@field value string?
+---@field range table?
+---@field expression table?
+
+---@class x18n.DecorationsResult
+---@field locale string?
+---@field decorations x18n.Decoration[]?
+
+---@alias x18n.FileClass 'unknown'|'warming'|'code'|'locale'|'plain'
+
+---@class x18n.BufferView
+---@field timer uv_timer_t?
+---@field retry uv_timer_t?
+---@field attempt integer
+---@field class x18n.FileClass
+---@field result x18n.DecorationsResult?
+---@field missing_lines table<integer, true>?
+
+---@class x18n.WindowBook
+---@field baseline table<integer, integer>
+---@field raised table<integer, true>
+---@field last_baseline integer?
+
+---@class x18n.LocaleEol
+---@field explicit boolean?
+---@field shown boolean
+---@field usage boolean
+
+---@class x18n.DecorationsConfig
+---@field enabled boolean?
+---@field mode x18n.ModeInput?
+---@field virt_text_pos string?
+---@field debounce_ms integer?
+---@field cursor_redraw_ms integer?
+---@field show_locale_file_eol_translation boolean?
+---@field show_locale_file_eol_usage boolean?
+
+---@class x18n.DecorationsState
+---@field cfg x18n.DecorationsConfig
+---@field enabled boolean
+---@field last_non_origin x18n.ShowMode
+---@field buffers table<integer, x18n.BufferView>
+---@field windows x18n.WindowBook
+---@field cursor_timer uv_timer_t?
+---@field eol x18n.LocaleEol
+
+---@class x18n.Concealed
+---@field kind 'concealed'
+---@field start integer[]
+---@field finish integer[]
+---@field text string?
+---@field pos x18n.VirtPos
+---@field hl string
+
+---@class x18n.Annotation
+---@field kind 'annotation'
+---@field at integer[]
+---@field text string
+---@field pos x18n.VirtPos
+---@field hl string
+
+---@alias x18n.Shape x18n.Concealed|x18n.Annotation
+
 local ns = vim.api.nvim_create_namespace 'x18n_decoration'
-local cfg = {}
-local enabled = false
-local pending = {}
-local retries = {}
-local locale_files = {}
-local plain_files = {}
-local results = {}
-local cursor_timer = nil
-local baseline = {}
-local raised = {}
-local last_baseline = nil
-local locale_eol_translation = true
-local locale_eol_value_shown = false
-local locale_eol_usage = true
+
+---@type x18n.DecorationsState
+local state = {
+  cfg = {},
+  enabled = false,
+  last_non_origin = 'conceal',
+  buffers = {},
+  windows = { baseline = {}, raised = {}, last_baseline = nil },
+  cursor_timer = nil,
+  eol = { explicit = nil, shown = false, usage = true },
+}
+
+local windows = {}
+
+---@type table<x18n.ShowMode, x18n.ModeRule>
+local RULES = {
+  both = { conceal = false, shows = true, cursor = 'same', pos = 'inline' },
+  translation = { conceal = true, shows = true, cursor = 'inline_arrow', pos = 'inline' },
+  translation_conceal = { conceal = true, shows = true, cursor = 'hidden', pos = 'inline' },
+  origin = { conceal = false, shows = false, cursor = 'same', pos = 'inline' },
+  conceal = { conceal = true, shows = true, cursor = 'eol_arrow', pos = 'inline' },
+  eol = { conceal = false, shows = true, cursor = 'same', pos = 'eol' },
+}
+
+---@type table<string, x18n.ShowMode>
+local ALIAS = { inline = 'both' }
+
+---@type table<x18n.ShowMode, x18n.ShowMode>
+local ORIGIN_ENTER = { translation = 'both', translation_conceal = 'both', conceal = 'both' }
+
+---@type table<x18n.ShowMode, x18n.ShowMode>
+local ORIGIN_BACK = { both = 'translation_conceal' }
 
 local function define_highlights()
   vim.api.nvim_set_hl(0, 'X18nValue', { default = true, link = 'Comment' })
   vim.api.nvim_set_hl(0, 'X18nValueMissing', { default = true, link = 'DiagnosticError' })
 end
 
-local function hl_for(state)
-  if state == 'ok' then
+local function hl_for(status)
+  if status == 'ok' then
     return 'X18nValue'
   end
-  if state == 'missing' then
+  if status == 'missing' then
     return 'X18nValueMissing'
   end
   return 'WarningMsg'
 end
 
-local MODES = {
-  both = { conceal = false, value = 'always', cursor = 'inline', pos = 'inline', cursor_dependent = false },
-  translation = { conceal = true, value = 'always', cursor = 'inline', pos = 'inline', cursor_dependent = true },
-  translation_conceal = { conceal = true, value = 'away', cursor = 'none', pos = 'inline', cursor_dependent = true },
-  origin = { conceal = false, value = 'never', cursor = 'none', pos = 'inline', cursor_dependent = false },
-  conceal = { conceal = true, value = 'away', cursor = 'arrow', pos = 'inline', cursor_dependent = true },
-  eol = { conceal = false, value = 'always', cursor = 'inline', pos = 'eol', cursor_dependent = false },
-}
-MODES.inline = MODES.both
-
-local last_non_origin = 'conceal'
-
-local function canonical(mode)
-  if mode == 'inline' then
-    return 'both'
-  end
-  return MODES[mode] and mode or 'both'
+---@param mode string?
+---@return x18n.ShowMode?
+local function mode_key(mode)
+  local key = mode and (ALIAS[mode] or mode) or nil
+  return key and RULES[key] and key or nil
 end
 
-local function plan()
-  return MODES[canonical(cfg.mode)]
+---@return x18n.ModeRule
+local function current_rule()
+  return RULES[mode_key(state.cfg.mode) or 'both']
 end
 
 local function clear(bufnr)
   if vim.api.nvim_buf_is_valid(bufnr) then
     vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+  end
+end
+
+---@param timer uv_timer_t?
+local function stop_timer(timer)
+  if timer and not timer:is_closing() then
+    timer:stop()
+    timer:close()
+  end
+end
+
+---@param bufnr integer
+---@return x18n.BufferView
+local function view_for(bufnr)
+  local view = state.buffers[bufnr]
+  if not view then
+    view = { attempt = 0, class = 'unknown' }
+    state.buffers[bufnr] = view
+  end
+  return view
+end
+
+---@param bufnr integer
+---@return boolean
+local function conceals(bufnr)
+  local view = state.buffers[bufnr]
+  return state.enabled
+    and state.cfg.debounce_ms ~= nil
+    and current_rule().conceal
+    and view ~= nil
+    and view.result ~= nil
+    and view.class ~= 'locale'
+    and view.class ~= 'plain'
+end
+
+---@param book x18n.WindowBook
+---@param win integer
+---@return integer?
+local function capture_level(book, win)
+  if book.baseline[win] == nil then
+    local level = vim.wo[win].conceallevel
+    book.baseline[win] = level
+    book.last_baseline = level
+  end
+  return book.baseline[win]
+end
+
+function windows.raise(book, win)
+  capture_level(book, win)
+  book.raised[win] = true
+  if vim.wo[win].conceallevel < 2 then
+    vim.wo[win].conceallevel = 2
+  end
+end
+
+function windows.restore(book, win)
+  if not book.raised[win] then
+    return
+  end
+  book.raised[win] = nil
+  if book.baseline[win] ~= nil and vim.api.nvim_win_is_valid(win) then
+    vim.wo[win].conceallevel = book.baseline[win]
+  end
+end
+
+function windows.release(book, win)
+  if not book.raised[win] and book.baseline[win] ~= nil then
+    vim.wo[win].conceallevel = book.baseline[win]
+  end
+end
+
+function windows.raise_buffer(book, bufnr)
+  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+    windows.raise(book, win)
+  end
+end
+
+function windows.restore_all(book)
+  for _, win in ipairs(vim.tbl_keys(book.raised)) do
+    windows.restore(book, win)
+  end
+end
+
+function windows.restore_buffer(book, bufnr)
+  for _, win in ipairs(vim.tbl_keys(book.raised)) do
+    if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == bufnr then
+      windows.restore(book, win)
+    end
+  end
+end
+
+function windows.forget(book, win)
+  book.baseline[win] = nil
+  book.raised[win] = nil
+end
+
+function windows.reconcile(book, bufnr)
+  if conceals(bufnr) then
+    return
+  end
+  windows.restore(book, vim.api.nvim_get_current_win())
+end
+
+--- A window created by a split inherits the source options after WinNew, so the
+--- reset has to happen when the new buffer is first displayed.
+function windows.release_buffer(book, bufnr)
+  if conceals(bufnr) then
+    return
+  end
+  windows.release(book, vim.api.nvim_get_current_win())
+end
+
+function windows.adopt(book, win)
+  if vim.api.nvim_win_get_config(win).relative ~= '' then
+    return
+  end
+  local previous = vim.fn.win_getid(vim.fn.winnr '#')
+  local level = book.baseline[previous] or book.last_baseline
+  if level ~= nil then
+    book.baseline[win] = level
+    vim.wo[win].conceallevel = level
   end
 end
 
@@ -72,78 +277,39 @@ local function buffers_of(client)
   return out
 end
 
-local function ensure_conceallevel(bufnr)
-  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
-    if baseline[win] == nil then
-      baseline[win] = vim.wo[win].conceallevel
-      last_baseline = baseline[win]
-    end
-    raised[win] = true
-    if vim.wo[win].conceallevel < 2 then
-      vim.wo[win].conceallevel = 2
-    end
+local function cursor_line(bufnr)
+  if vim.api.nvim_win_get_buf(0) ~= bufnr then
+    return -1
   end
+  return vim.api.nvim_win_get_cursor(0)[1] - 1
 end
 
-local function restore_window(win)
-  if not raised[win] then
-    return
-  end
-  raised[win] = nil
-  if baseline[win] ~= nil and vim.api.nvim_win_is_valid(win) then
-    vim.wo[win].conceallevel = baseline[win]
-  end
-end
-
-local function restore_conceallevel()
-  local wins = {}
-  for win in pairs(raised) do
-    wins[#wins + 1] = win
-  end
-  for _, win in ipairs(wins) do
-    restore_window(win)
-  end
-end
-
-local function restore_conceallevel_for(bufnr)
-  local wins = {}
-  for win in pairs(raised) do
-    if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == bufnr then
-      wins[#wins + 1] = win
-    end
-  end
-  for _, win in ipairs(wins) do
-    restore_window(win)
-  end
-end
-
-local function needs_conceal(bufnr)
-  return enabled
-    and cfg.debounce_ms ~= nil
-    and plan().conceal
-    and results[bufnr] ~= nil
-    and not locale_files[bufnr]
-    and not plain_files[bufnr]
-end
-
-local function reconcile_window(bufnr)
-  if needs_conceal(bufnr) then
-    return
-  end
-  restore_window(vim.api.nvim_get_current_win())
-end
-
---- A window created by a split inherits the source options after WinNew, so the
---- reset has to happen when the new buffer is first displayed.
+---@param view x18n.BufferView
 ---@param bufnr integer
-local function reset_inherited_window(bufnr)
-  if needs_conceal(bufnr) then
-    return
+local function index_missing_diagnostics(view, bufnr)
+  local lines = {}
+  for _, diag in ipairs(vim.diagnostic.get(bufnr)) do
+    if
+      diag.source == 'x18n'
+      and (diag.code == 'missing-key' or diag.user_data and type(diag.user_data) == 'table' and diag.user_data.key)
+    then
+      lines[diag.lnum] = true
+    end
   end
-  local win = vim.api.nvim_get_current_win()
-  if not raised[win] and baseline[win] ~= nil then
-    vim.wo[win].conceallevel = baseline[win]
+  view.missing_lines = lines
+end
+
+---@param view x18n.BufferView
+---@param bufnr integer
+---@param d x18n.Decoration
+---@return boolean
+local function has_missing_diagnostic(view, bufnr, d)
+  local lines = view.missing_lines
+  if not lines or next(lines) == nil then
+    return false
   end
+  local line = util.to_byte(bufnr, d.expression and d.expression.start or d.range.start)
+  return lines[line] == true
 end
 
 local function widen_over_quotes(bufnr, range)
@@ -161,217 +327,113 @@ local function widen_over_quotes(bufnr, range)
   return s_line, s_col, e_line, e_col
 end
 
-local function cursor_line(bufnr)
-  if vim.api.nvim_win_get_buf(0) ~= bufnr then
-    return -1
+---@param bufnr integer
+---@param rule x18n.ModeRule
+---@param d x18n.Decoration
+---@param cursor_row integer
+---@param skip boolean
+---@return x18n.Shape?
+local function shape_for(bufnr, rule, d, cursor_row, skip)
+  if skip then
+    return nil
   end
-  return vim.api.nvim_win_get_cursor(0)[1] - 1
-end
-
-local missing_diag_lines = {}
-
-local function has_missing_diagnostic(bufnr, d)
-  local lines = missing_diag_lines[bufnr]
-  if not lines then
-    return false
-  end
-  local any_x18n = next(lines) ~= nil
-  if not any_x18n then
-    return false
-  end
-  local line = util.to_byte(bufnr, d.expression and d.expression.start or d.range.start)
-  return lines[line] == true
-end
-
-local function index_missing_diagnostics(bufnr)
-  local lines = {}
-  for _, diag in ipairs(vim.diagnostic.get(bufnr)) do
-    if
-      diag.source == 'x18n'
-      and (diag.code == 'missing-key' or diag.user_data and type(diag.user_data) == 'table' and diag.user_data.key)
-    then
-      lines[diag.lnum] = true
-    end
-  end
-  missing_diag_lines[bufnr] = lines
-  return next(lines) ~= nil
-end
---- Toggle decorations for every attached buffer, clearing them when off.
----@return boolean the new state
-function M.toggle()
-  if not cfg.debounce_ms then
-    return false
-  end
-  enabled = not enabled
-  for _, client in ipairs(vim.lsp.get_clients { name = 'x18n' }) do
-    for _, bufnr in ipairs(buffers_of(client)) do
-      if enabled then
-        M.request(bufnr, client)
-      else
-        clear(bufnr)
-        require('x18n.mirror').clear(bufnr)
+  if rule.conceal and d.state == 'ok' and d.value and d.value ~= '' and d.range then
+    local s_line, s_col, e_line, e_col = widen_over_quotes(bufnr, d.range)
+    local text, pos = d.value, 'inline'
+    if cursor_row == s_line then
+      if rule.cursor == 'inline_arrow' then
+        text, pos = ' → ' .. d.value, 'inline'
+      elseif rule.cursor == 'eol_arrow' then
+        text, pos = '→ ' .. d.value, 'eol'
+      elseif rule.cursor == 'hidden' then
+        text = nil
       end
     end
+    return {
+      kind = 'concealed',
+      start = { s_line, s_col },
+      finish = { e_line, e_col },
+      text = text,
+      pos = pos,
+      hl = hl_for 'ok',
+    }
   end
-  if not enabled then
-    restore_conceallevel()
+  local expression = d.expression or d.range
+  local line, col = util.to_byte(bufnr, expression['end'])
+  if cursor_row == line and rule.cursor == 'hidden' then
+    return nil
   end
-  return enabled
+  local text = (d.value and d.value ~= '') and (' → ' .. d.value) or (' → ' .. (d.state or 'missing'))
+  return {
+    kind = 'annotation',
+    at = { line, col },
+    text = text,
+    pos = rule.pos,
+    hl = hl_for(d.state),
+  }
 end
 
---- Toggle the locale-file EOL translation segment. Usage badges are separate.
----@return boolean the new state
-function M.toggle_locale_file_eol()
-  if not cfg.debounce_ms then
-    return false
+---@param bufnr integer
+---@param shape x18n.Shape
+local function draw(bufnr, shape)
+  if shape.kind == 'annotation' then
+    vim.api.nvim_buf_set_extmark(bufnr, ns, shape.at[1], shape.at[2], {
+      virt_text = { { shape.text, shape.hl } },
+      virt_text_pos = shape.pos,
+      hl_mode = 'combine',
+    })
+    return
   end
-  locale_eol_translation = not M.locale_file_eol()
-  locale_eol_value_shown = locale_eol_translation
-  M.refresh_attached()
-  return locale_eol_translation
+  --[[ An empty cchar hides the range completely; any printable char
+    (a space included) leaves a visible gap. ]]
+  vim.api.nvim_buf_set_extmark(bufnr, ns, shape.start[1], shape.start[2], {
+    end_line = shape.finish[1],
+    end_col = shape.finish[2],
+    conceal = '',
+    hl_mode = 'combine',
+  })
+  if not shape.text then
+    return
+  end
+  local line, col = shape.finish[1], shape.finish[2]
+  if shape.pos == 'eol' then
+    line, col = shape.start[1], 0
+  end
+  vim.api.nvim_buf_set_extmark(bufnr, ns, line, col, {
+    virt_text = { { shape.text, shape.hl } },
+    virt_text_pos = shape.pos,
+    hl_mode = 'combine',
+  })
 end
 
---- The effective state: an explicit setting wins, auto follows the server's
---- ability to report usage counts (the last locale render answers it).
----@return boolean
-function M.locale_file_eol()
-  if cfg.debounce_ms == nil then
-    return false
-  end
-  if locale_eol_translation ~= nil then
-    return locale_eol_translation
-  end
-  return locale_eol_value_shown
-end
-
---- Switch the display mode. Unknown modes leave the current one in place.
----@param mode string
----@return string current mode
-function M.set_mode(mode)
-  if not cfg.debounce_ms then
-    return 'off'
-  end
-  if not MODES[mode] then
-    return cfg.mode
-  end
-  local target = canonical(mode)
-  if target ~= 'origin' then
-    last_non_origin = target
-  end
-  cfg.mode = mode
-  if not MODES[target].conceal then
-    restore_conceallevel()
-  end
-  if enabled then
-    M.refresh_attached()
-  end
-  return cfg.mode
-end
-
----@return string
-function M.get_mode()
-  return cfg.mode or 'off'
-end
-
---- Toggle the translation overlay: origin in, or the last mode back.
----@return string new mode
-function M.toggle_translation()
-  if not cfg.debounce_ms then
-    return 'off'
-  end
-  local current = canonical(cfg.mode)
-  if current == 'origin' then
-    return M.set_mode(last_non_origin or 'conceal')
-  end
-  last_non_origin = current
-  return M.set_mode 'origin'
-end
-
---- Toggle whether the raw key is shown while translations stay active.
---- Mirrors i18n.nvim's transitions so muscle memory carries over.
----@return string new mode
-function M.toggle_origin()
-  if not cfg.debounce_ms then
-    return 'off'
-  end
-  local current = canonical(cfg.mode)
-  if current == 'origin' then
-    local back = last_non_origin or 'conceal'
-    if back == 'both' then
-      back = 'translation_conceal'
-    end
-    return M.set_mode(back)
-  end
-  local target = 'translation_conceal'
-  if current == 'translation' or current == 'translation_conceal' or current == 'conceal' then
-    target = 'both'
-  end
-  return M.set_mode(target)
-end
-
+---@param bufnr integer
+---@param result x18n.DecorationsResult
 local function render(bufnr, result)
-  if not enabled then
+  if not state.enabled then
     return
   end
   if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
     return
   end
   clear(bufnr)
-  results[bufnr] = result
+  local view = view_for(bufnr)
+  view.result, view.class = result, 'code'
   require('x18n.mirror').render(bufnr, result)
-  index_missing_diagnostics(bufnr)
-  local p = plan()
-  if p.value == 'never' then
-    restore_conceallevel()
+  index_missing_diagnostics(view, bufnr)
+  local rule = current_rule()
+  if not rule.shows then
+    windows.restore_all(state.windows)
     return
   end
-  local cur = p.cursor_dependent and cursor_line(bufnr) or -1
-  if p.conceal then
-    ensure_conceallevel(bufnr)
+  local cur = rule.cursor ~= 'same' and cursor_line(bufnr) or -1
+  if rule.conceal then
+    windows.raise_buffer(state.windows, bufnr)
   end
   for _, d in ipairs(result and result.decorations or {}) do
-    local skip = d.state == 'missing' and has_missing_diagnostic(bufnr, d)
-    if not skip and p.conceal and d.state == 'ok' and d.value and d.value ~= '' and d.range then
-      local s_line, s_col, e_line, e_col = widen_over_quotes(bufnr, d.range)
-      vim.api.nvim_buf_set_extmark(bufnr, ns, s_line, s_col, {
-        end_line = e_line,
-        end_col = e_col,
-        --[[ An empty cchar hides the range completely; any printable char
-          (a space included) leaves a visible gap. ]]
-        conceal = '',
-        hl_mode = 'combine',
-      })
-      local text, pos
-      if s_line ~= cur then
-        text, pos = d.value, 'inline'
-      elseif p.cursor == 'arrow' then
-        text, pos = '→ ' .. d.value, 'eol'
-      elseif p.cursor == 'inline' then
-        text, pos = ' → ' .. d.value, 'inline'
-      end
-      if text then
-        local line, col = e_line, e_col
-        if pos == 'eol' then
-          line, col = s_line, 0
-        end
-        vim.api.nvim_buf_set_extmark(bufnr, ns, line, col, {
-          virt_text = { { text, hl_for 'ok' } },
-          virt_text_pos = pos,
-          hl_mode = 'combine',
-        })
-      end
-    elseif not skip then
-      local expression = d.expression or d.range
-      local line, col = util.to_byte(bufnr, expression['end'])
-      local on_cursor = p.cursor_dependent and line == cur
-      if not (on_cursor and p.cursor == 'none') then
-        local text = (d.value and d.value ~= '') and (' → ' .. d.value) or (' → ' .. (d.state or 'missing'))
-        vim.api.nvim_buf_set_extmark(bufnr, ns, line, col, {
-          virt_text = { { text, hl_for(d.state) } },
-          virt_text_pos = p.pos,
-          hl_mode = 'combine',
-        })
-      end
+    local skip = d.state == 'missing' and has_missing_diagnostic(view, bufnr, d)
+    local shape = shape_for(bufnr, rule, d, cur, skip)
+    if shape then
+      draw(bufnr, shape)
     end
   end
 end
@@ -386,15 +448,19 @@ local function usage_label(n)
   return n .. ' usages'
 end
 
+---@param bufnr integer
+---@param result table?
 local function render_locale_file(bufnr, result)
-  if not enabled then
+  if not state.enabled then
     return
   end
   if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) then
     return
   end
   clear(bufnr)
-  restore_conceallevel_for(bufnr)
+  windows.restore_buffer(state.windows, bufnr)
+  local view = view_for(bufnr)
+  view.class = 'locale'
   local keys = result and result.keys or {}
   local has_usages = false
   for _, k in ipairs(keys) do
@@ -403,23 +469,23 @@ local function render_locale_file(bufnr, result)
       break
     end
   end
-  local show_value = locale_eol_translation == true or (locale_eol_translation == nil and not has_usages)
+  local show_value = state.eol.explicit == true or (state.eol.explicit == nil and not has_usages)
   if #keys > 0 then
-    locale_eol_value_shown = show_value
+    state.eol.shown = show_value
   end
   for _, k in ipairs(keys) do
     local segments = {}
     if show_value then
       segments[#segments + 1] = k.value or 'missing'
     end
-    if locale_eol_usage and k.usages ~= nil then
+    if state.eol.usage and k.usages ~= nil then
       segments[#segments + 1] = usage_label(k.usages)
     end
     if #segments > 0 then
       local line = util.to_byte(bufnr, k.range.start)
-      local state = (show_value and k.value == nil) and 'missing' or 'ok'
+      local hl_state = (show_value and k.value == nil) and 'missing' or 'ok'
       vim.api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
-        virt_text = { { ' ' .. table.concat(segments, ' · '), hl_for(state) } },
+        virt_text = { { ' ' .. table.concat(segments, ' · '), hl_for(hl_state) } },
         virt_text_pos = 'eol',
         hl_mode = 'combine',
       })
@@ -427,6 +493,9 @@ local function render_locale_file(bufnr, result)
   end
 end
 
+---@param bufnr integer
+---@param client vim.lsp.Client
+---@param on_result fun(keys: table[]?)?
 local function request_file_keys(bufnr, client, on_result)
   client:request('x18n/fileKeys', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
     require('x18n').debug(
@@ -447,17 +516,24 @@ local function request_file_keys(bufnr, client, on_result)
   end)
 end
 
-local function retry_warm_up(bufnr, client)
-  local attempt = retries[bufnr] or 0
-  if attempt >= 5 then
+---@param bufnr integer
+---@param client vim.lsp.Client
+---@param view x18n.BufferView
+---@return boolean retried
+local function retry_warm_up(bufnr, client, view)
+  if view.attempt >= 5 then
     return false
   end
-  retries[bufnr] = attempt + 1
-  vim.defer_fn(function()
-    if pending[bufnr] == nil and not locale_files[bufnr] then
+  local delay = 500 * 2 ^ view.attempt
+  view.attempt = view.attempt + 1
+  view.class = 'warming'
+  stop_timer(view.retry)
+  view.retry = vim.defer_fn(function()
+    view.retry = nil
+    if view.timer == nil and view.class ~= 'locale' then
       M.request(bufnr, client)
     end
-  end, 500 * 2 ^ attempt)
+  end, delay)
   return true
 end
 
@@ -465,20 +541,17 @@ end
 --- The client is passed in: during LspAttach the buffer is not yet in the client's
 --- attached list, so a get_clients({ bufnr }) lookup races and silently drops.
 function M.request(bufnr, client)
-  if not enabled or not cfg.debounce_ms then
+  if not state.enabled or not state.cfg.debounce_ms then
     return
   end
-  local timer = pending[bufnr]
-  if timer then
-    timer:stop()
-    timer:close()
-  end
-  pending[bufnr] = vim.defer_fn(function()
-    pending[bufnr] = nil
+  local view = view_for(bufnr)
+  stop_timer(view.timer)
+  view.timer = vim.defer_fn(function()
+    view.timer = nil
     if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_buf_is_loaded(bufnr) or client:is_stopped() then
       return
     end
-    if locale_files[bufnr] then
+    if view.class == 'locale' then
       return request_file_keys(bufnr, client)
     end
     client:request('x18n/decorations', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
@@ -494,37 +567,140 @@ function M.request(bufnr, client)
         return
       end
       if result and result.decorations and #result.decorations > 0 then
-        retries[bufnr] = nil
+        view.attempt = 0
         return vim.schedule(function()
           render(bufnr, result)
         end)
       end
-      if plain_files[bufnr] then
+      if view.class == 'plain' then
         return
       end
       request_file_keys(bufnr, client, function(keys)
         if keys then
-          locale_files[bufnr] = true
-          plain_files[bufnr] = nil
-          retries[bufnr] = nil
+          view.attempt = 0
+          view.class = 'locale'
           return vim.schedule(function()
             render_locale_file(bufnr, { keys = keys })
           end)
         end
-        if retry_warm_up(bufnr, client) then
+        if retry_warm_up(bufnr, client, view) then
           return
         end
-        retries[bufnr] = nil
-        if (result and result.locale or '') ~= '' then
-          plain_files[bufnr] = true
-        end
+        view.attempt = 0
+        view.class = ((result and result.locale or '') ~= '') and 'plain' or 'unknown'
       end)
     end)
-  end, cfg.debounce_ms)
+  end, state.cfg.debounce_ms)
+end
+
+--- Toggle decorations for every attached buffer, clearing them when off.
+---@return boolean the new state
+function M.toggle()
+  if not state.cfg.debounce_ms then
+    return false
+  end
+  state.enabled = not state.enabled
+  for _, client in ipairs(vim.lsp.get_clients { name = 'x18n' }) do
+    for _, bufnr in ipairs(buffers_of(client)) do
+      if state.enabled then
+        M.request(bufnr, client)
+      else
+        clear(bufnr)
+        require('x18n.mirror').clear(bufnr)
+      end
+    end
+  end
+  if not state.enabled then
+    windows.restore_all(state.windows)
+  end
+  return state.enabled
+end
+
+--- Toggle the locale-file EOL translation segment. Usage badges are separate.
+---@return boolean the new state
+function M.toggle_locale_file_eol()
+  if not state.cfg.debounce_ms then
+    return false
+  end
+  state.eol.explicit = not M.locale_file_eol()
+  state.eol.shown = state.eol.explicit
+  M.refresh_attached()
+  return state.eol.explicit
+end
+
+--- The effective state: an explicit setting wins, auto follows the server's
+--- ability to report usage counts (the last locale render answers it).
+---@return boolean
+function M.locale_file_eol()
+  if not state.cfg.debounce_ms then
+    return false
+  end
+  if state.eol.explicit ~= nil then
+    return state.eol.explicit
+  end
+  return state.eol.shown
+end
+
+--- Switch the display mode. Unknown modes leave the current one in place.
+---@param mode string
+---@return string current mode
+function M.set_mode(mode)
+  if not state.cfg.debounce_ms then
+    return 'off'
+  end
+  local key = mode_key(mode)
+  if not key then
+    return state.cfg.mode
+  end
+  if key ~= 'origin' then
+    state.last_non_origin = key
+  end
+  state.cfg.mode = mode
+  if not RULES[key].conceal then
+    windows.restore_all(state.windows)
+  end
+  if state.enabled then
+    M.refresh_attached()
+  end
+  return state.cfg.mode
+end
+
+---@return string
+function M.get_mode()
+  return state.cfg.mode or 'off'
+end
+
+--- Toggle the translation overlay: origin in, or the last mode back.
+---@return string new mode
+function M.toggle_translation()
+  if not state.cfg.debounce_ms then
+    return 'off'
+  end
+  local current = mode_key(state.cfg.mode) or 'both'
+  if current == 'origin' then
+    return M.set_mode(state.last_non_origin or 'conceal')
+  end
+  state.last_non_origin = current
+  return M.set_mode 'origin'
+end
+
+--- Toggle whether the raw key is shown while translations stay active.
+--- Mirrors i18n.nvim's transitions so muscle memory carries over.
+---@return string new mode
+function M.toggle_origin()
+  if not state.cfg.debounce_ms then
+    return 'off'
+  end
+  local current = mode_key(state.cfg.mode) or 'both'
+  if current == 'origin' then
+    local previous = state.last_non_origin or 'conceal'
+    return M.set_mode(ORIGIN_BACK[previous] or previous)
+  end
+  return M.set_mode(ORIGIN_ENTER[current] or 'translation_conceal')
 end
 
 function M.refresh(bufnr)
-  if not cfg.debounce_ms then
+  if not state.cfg.debounce_ms then
     return
   end
   bufnr = bufnr or vim.api.nvim_get_current_buf()
@@ -546,67 +722,71 @@ function M.refresh_attached()
   end
 end
 
+--- Exposed for tests.
 function M.namespace()
   return ns
 end
 
+--- Exposed for tests.
 function M.state()
+  local results = {}
+  for bufnr, view in pairs(state.buffers) do
+    if view.result ~= nil then
+      results[#results + 1] = bufnr
+    end
+  end
   return {
-    baseline = vim.deepcopy(baseline),
-    raised = vim.deepcopy(raised),
-    last = last_baseline,
-    results = vim.tbl_keys(results),
+    baseline = vim.deepcopy(state.windows.baseline),
+    raised = vim.deepcopy(state.windows.raised),
+    last = state.windows.last_baseline,
+    results = results,
   }
 end
 
 --- Clear every decoration and stop pending refreshes. Used when the client is
 --- stopped; the caches are dropped so a fresh attach rebuilds them.
 function M.clear_all()
-  for _, timer in pairs(pending) do
-    if not timer:is_closing() then
-      timer:stop()
-      timer:close()
-    end
+  for _, view in pairs(state.buffers) do
+    stop_timer(view.timer)
+    stop_timer(view.retry)
   end
-  pending = {}
-  results = {}
-  retries = {}
-  locale_files = {}
-  plain_files = {}
+  stop_timer(state.cursor_timer)
+  state.cursor_timer = nil
+  state.buffers = {}
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(bufnr) then
       clear(bufnr)
     end
   end
-  restore_conceallevel()
+  windows.restore_all(state.windows)
   require('x18n.mirror').clear_all()
-  baseline = {}
-  raised = {}
+  state.windows.baseline = {}
+  state.windows.raised = {}
 end
 
 local function redraw(bufnr)
-  local result = results[bufnr]
-  if result and vim.api.nvim_buf_is_loaded(bufnr) then
-    render(bufnr, result)
+  local view = state.buffers[bufnr]
+  if view and view.class == 'code' and view.result and vim.api.nvim_buf_is_loaded(bufnr) then
+    render(bufnr, view.result)
   end
 end
 
----@param opts {mode: string?, virt_text_pos: string?, debounce_ms: integer, cursor_redraw_ms?: integer}
+---@param opts x18n.DecorationsConfig
 function M.setup(opts)
-  cfg = opts
+  state.cfg = opts
   --[[ `virt_text_pos` is the pre-conceal spelling of `mode`; keep both working. ]]
-  if not cfg.mode and cfg.virt_text_pos then
-    cfg.mode = cfg.virt_text_pos
+  if not state.cfg.mode and state.cfg.virt_text_pos then
+    state.cfg.mode = state.cfg.virt_text_pos
   end
-  cfg.mode = cfg.mode or 'conceal'
-  if not MODES[cfg.mode] then
-    cfg.mode = 'both'
+  state.cfg.mode = state.cfg.mode or 'conceal'
+  if not mode_key(state.cfg.mode) then
+    state.cfg.mode = 'both'
   end
-  last_non_origin = canonical(cfg.mode)
-  locale_eol_translation = cfg.show_locale_file_eol_translation
-  locale_eol_value_shown = locale_eol_translation == true
-  locale_eol_usage = cfg.show_locale_file_eol_usage ~= false
-  enabled = true
+  state.last_non_origin = mode_key(state.cfg.mode) or 'both'
+  state.eol.explicit = state.cfg.show_locale_file_eol_translation
+  state.eol.shown = state.eol.explicit == true
+  state.eol.usage = state.cfg.show_locale_file_eol_usage ~= false
+  state.enabled = true
   define_highlights()
 
   local group = vim.api.nvim_create_augroup('x18n_decoration', { clear = true })
@@ -623,16 +803,12 @@ function M.setup(opts)
   aug('LspDetach', {
     group = group,
     callback = function(a)
-      local timer = pending[a.buf]
-      if timer then
-        timer:stop()
-        timer:close()
-        pending[a.buf] = nil
+      local view = state.buffers[a.buf]
+      if view then
+        stop_timer(view.timer)
+        stop_timer(view.retry)
+        state.buffers[a.buf] = nil
       end
-      retries[a.buf] = nil
-      locale_files[a.buf] = nil
-      plain_files[a.buf] = nil
-      results[a.buf] = nil
       clear(a.buf)
     end,
   })
@@ -645,23 +821,14 @@ function M.setup(opts)
   aug('BufEnter', {
     group = group,
     callback = function(a)
-      reconcile_window(a.buf)
+      windows.reconcile(state.windows, a.buf)
       M.refresh(a.buf)
     end,
   })
   aug('WinNew', {
     group = group,
     callback = function()
-      local win = vim.api.nvim_get_current_win()
-      if vim.api.nvim_win_get_config(win).relative ~= '' then
-        return
-      end
-      local previous = vim.fn.win_getid(vim.fn.winnr '#')
-      local level = baseline[previous] or last_baseline
-      if level ~= nil then
-        baseline[win] = level
-        vim.wo[win].conceallevel = level
-      end
+      windows.adopt(state.windows, vim.api.nvim_get_current_win())
     end,
   })
   aug('WinClosed', {
@@ -669,8 +836,7 @@ function M.setup(opts)
     callback = function(a)
       local win = tonumber(a.match)
       if win then
-        baseline[win] = nil
-        raised[win] = nil
+        windows.forget(state.windows, win)
       end
     end,
   })
@@ -688,17 +854,14 @@ function M.setup(opts)
   })
   aug('ColorScheme', { group = group, callback = define_highlights })
   local on_move = function(bufnr)
-    if not plan().cursor_dependent then
+    if current_rule().cursor == 'same' then
       return
     end
-    if cursor_timer then
-      cursor_timer:stop()
-      cursor_timer:close()
-    end
-    cursor_timer = vim.defer_fn(function()
-      cursor_timer = nil
+    stop_timer(state.cursor_timer)
+    state.cursor_timer = vim.defer_fn(function()
+      state.cursor_timer = nil
       redraw(bufnr)
-    end, cfg.cursor_redraw_ms or 100)
+    end, state.cfg.cursor_redraw_ms or 100)
   end
   aug('CursorMoved', {
     group = group,
@@ -715,19 +878,15 @@ function M.setup(opts)
   aug('WinEnter', {
     group = group,
     callback = function(a)
-      reconcile_window(a.buf)
-      if results[a.buf] then
-        redraw(a.buf)
-      end
+      windows.reconcile(state.windows, a.buf)
+      redraw(a.buf)
     end,
   })
   aug('BufWinEnter', {
     group = group,
     callback = function(a)
-      reset_inherited_window(a.buf)
-      if results[a.buf] then
-        redraw(a.buf)
-      end
+      windows.release_buffer(state.windows, a.buf)
+      redraw(a.buf)
     end,
   })
 end

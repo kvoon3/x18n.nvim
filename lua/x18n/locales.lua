@@ -107,10 +107,32 @@ function M.key_info(client, uri, position, on_result)
   end)
 end
 
+---@alias x18n.KeyLocation {code: string?, location: table}
+
+---@class x18n.KeyLocations
+---@field paired boolean
+---@field [integer] x18n.KeyLocation
+
+---@param locales table[]
+---@param count integer
+---@return string[]?
+local function present_codes(locales, count)
+  local codes = {}
+  for _, locale in ipairs(locales) do
+    if locale.present then
+      codes[#codes + 1] = locale.code
+    end
+  end
+  if #codes ~= count then
+    return nil
+  end
+  return codes
+end
+
 --- Every locale definition of the key at a position, paired with its code.
 --- The server sorts implementation locations by project locale order; keyInfo
 --- says which locales actually define the key.
----@param on_result fun(pairs: {code: string?, location: table}[], info: table?)
+---@param on_result fun(pairs: x18n.KeyLocations, info: table?)
 function M.key_locations(client, uri, position, on_result)
   M.key_info(client, uri, position, function(value)
     client:request('textDocument/implementation', {
@@ -118,36 +140,27 @@ function M.key_locations(client, uri, position, on_result)
       position = position,
     }, function(err, locations)
       locations = not err and locations or {}
-      local codes
-      if value and value.locales then
-        codes = {}
-        for _, locale in ipairs(value.locales) do
-          if locale.present then
-            codes[#codes + 1] = locale.code
-          end
-        end
-        if #codes ~= #locations then
-          codes = nil
-        end
-      end
-      local pairs_out = {}
+      local codes = value and value.locales and present_codes(value.locales, #locations) or nil
+      local result = { paired = codes ~= nil }
       for i, location in ipairs(locations) do
-        pairs_out[#pairs_out + 1] = { code = codes and codes[i] or nil, location = location }
+        result[i] = { code = codes and codes[i] or nil, location = location }
       end
-      on_result(pairs_out, value)
+      on_result(result, value)
     end)
   end)
 end
 
 --- The definition for a locale, falling back to the first locale.
----@param pairs {code: string, location: table}[]
+---@param pairs x18n.KeyLocations
 ---@param code string?
 ---@return table? location
 function M.location_for(pairs, code)
   code = code or M.display_locale()
-  for _, pair in ipairs(pairs) do
-    if pair.code == code then
-      return pair.location
+  if pairs.paired ~= false then
+    for _, pair in ipairs(pairs) do
+      if pair.code == code then
+        return pair.location
+      end
     end
   end
   return pairs[1] and pairs[1].location

@@ -33,9 +33,10 @@ local function key_info(client, entry, on_result)
   locales.key_info(client, entry.location.uri, entry.location.range.start, on_result)
 end
 
+---@param on_result fun(pairs: x18n.KeyLocations, info: table?)
 local function locale_locations(client, entry, on_result)
   if not entry.location then
-    return on_result({}, nil)
+    return on_result({ paired = false }, nil)
   end
   locales.key_locations(client, entry.location.uri, entry.location.range.start, on_result)
 end
@@ -114,23 +115,17 @@ local actions = {
       if #pairs == 0 then
         return notify('no locale definitions for ' .. entry.key, vim.log.levels.WARN)
       end
-      local by_code = {}
-      local has_codes = false
-      for _, pair in ipairs(pairs) do
-        if pair.code then
-          has_codes = true
+      local items = {}
+      if pairs.paired then
+        local by_code = {}
+        for _, pair in ipairs(pairs) do
           by_code[pair.code] = pair.location
         end
-      end
-      local items = {}
-      if has_codes then
         local codes = locales.cached()
         if #codes == 0 then
           locales.warm()
           for _, pair in ipairs(pairs) do
-            if pair.code then
-              codes[#codes + 1] = pair.code
-            end
+            codes[#codes + 1] = pair.code
           end
         end
         for _, code in ipairs(codes) do

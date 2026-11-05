@@ -257,6 +257,42 @@ local function set_copy_keymap(bufnr, key)
   end
 end
 
+---@class x18n.TranslationPopup
+---@field status 'pending'|'settled'|'abandoned'
+---@field shown boolean
+
+---@param handle x18n.TranslationPopup
+---@param info table?
+local function settle_translations(handle, info)
+  if handle.status ~= 'pending' then
+    return
+  end
+  handle.status = 'settled'
+  if not info then
+    return
+  end
+  local lines = require('x18n.key_info').render(info)
+  if #lines == 0 then
+    return
+  end
+  handle.shown = true
+  vim.schedule(function()
+    if handle.status ~= 'settled' then
+      return
+    end
+    --[[ The native preview machinery: anchored at the cursor, closes on
+      cursor movement, `q` dismisses, and a second invocation focuses the
+      open float instead of stacking another. No border or title here:
+      float styling belongs to the user's config. ]]
+    local fbuf = vim.lsp.util.open_floating_preview(lines, nil, {
+      focus_id = 'x18n/translations',
+    })
+    if fbuf then
+      set_copy_keymap(fbuf, info.key)
+    end
+  end)
+end
+
 --- Popup with the key's value in every locale. Returns false when the cursor
 --- is not on a key, so a keymap can fall back (e.g. to native hover).
 --- Synchronous: the keyInfo round trip is the wait.
@@ -269,41 +305,23 @@ function M.show_translations()
   end
   local bufnr = vim.api.nvim_get_current_buf()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  local done, shown, cancelled = false, false, false
+  ---@type x18n.TranslationPopup
+  local handle = { status = 'pending', shown = false }
   require('x18n.locales').key_info(client, vim.uri_from_bufnr(bufnr), {
     line = row - 1,
     character = util.to_utf16(bufnr, row - 1, col),
   }, function(info)
-    if cancelled then
-      return
-    end
-    if info then
-      local lines = require('x18n.key_info').render(info)
-      if #lines > 0 then
-        shown = true
-        vim.schedule(function()
-          --[[ The native preview machinery: anchored at the cursor, closes on
-            cursor movement, `q` dismisses, and a second invocation focuses the
-            open float instead of stacking another. No border or title here:
-            float styling belongs to the user's config. ]]
-          local fbuf = vim.lsp.util.open_floating_preview(lines, nil, {
-            focus_id = 'x18n/translations',
-          })
-          if fbuf then
-            set_copy_keymap(fbuf, info.key)
-          end
-        end)
-      end
-    end
-    done = true
+    settle_translations(handle, info)
   end)
-  vim.wait(500, function()
-    return done
-  end, 25)
-  if not done then
-    cancelled = true
+  if handle.status == 'pending' then
+    vim.wait(500, function()
+      return handle.status ~= 'pending'
+    end, 25)
   end
-  return shown
+  if handle.status == 'pending' then
+    handle.status = 'abandoned'
+  end
+  return handle.shown
 end
 
 --- How the server understood the workspace: config files, presets, resources.

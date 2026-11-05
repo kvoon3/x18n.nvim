@@ -10,6 +10,45 @@ local function cursor_params(bufnr)
   }
 end
 
+---@alias x18n.Write {locale: string, value: string}
+
+---@class x18n.WriteQueue
+---@field client vim.lsp.Client
+---@field key string
+---@field project string?
+---@field writes x18n.Write[]
+---@field next integer
+
+---@param queue x18n.WriteQueue
+local function pump(queue)
+  local write = queue.writes[queue.next]
+  if not write then
+    return require('x18n').notify(
+      ('added %s to %d locale(s) — unsaved buffers, review and save'):format(queue.key, #queue.writes)
+    )
+  end
+  queue.client:request('workspace/executeCommand', {
+    command = 'x18n.set',
+    arguments = {
+      {
+        project = queue.project,
+        key = queue.key,
+        locale = write.locale,
+        value = write.value,
+      },
+    },
+  }, function(err)
+    if err then
+      return require('x18n').notify(err.message, vim.log.levels.WARN)
+    end
+    queue.next = queue.next + 1
+    pump(queue)
+  end)
+end
+
+---@param writes x18n.Write[]
+---@param key string
+---@param project string?
 local function write(writes, key, project)
   if #writes == 0 then
     return require('x18n').notify 'nothing to write'
@@ -18,30 +57,7 @@ local function write(writes, key, project)
   if not client then
     return
   end
-  local function send(i)
-    if i > #writes then
-      return require('x18n').notify(
-        ('added %s to %d locale(s) — unsaved buffers, review and save'):format(key, #writes)
-      )
-    end
-    client:request('workspace/executeCommand', {
-      command = 'x18n.set',
-      arguments = {
-        {
-          project = project,
-          key = key,
-          locale = writes[i].locale,
-          value = writes[i].value,
-        },
-      },
-    }, function(err)
-      if err then
-        return require('x18n').notify(err.message, vim.log.levels.WARN)
-      end
-      send(i + 1)
-    end)
-  end
-  send(1)
+  pump { client = client, key = key, project = project, writes = writes, next = 1 }
 end
 
 local function resolve_key(key_arg)
