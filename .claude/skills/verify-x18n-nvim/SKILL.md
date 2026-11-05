@@ -25,9 +25,9 @@ Prerequisites:
 - The playground present: `playground/vue-vite`, `react-i18next`, `next-intl`,
   `laravel`, `rails`, `angular`, `monorepo`, `i18n-ally`.
 
-To verify the fork-only features (keyInfo popup data, param-filled values,
-locale-file usage counts), build the fork and export
-`X18N_LSP_BIN=~/f/x18n/packages/lsp/bin.mjs` before any script below.
+To verify keyInfo popup data, param-filled values and locale-file usage counts,
+build the fork and export `X18N_LSP_BIN=~/f/x18n/packages/lsp/bin.mjs` before
+any script below.
 
 There is no long-lived app process. "Launch" is one headless nvim per project,
 started by the wrapper; it copies the project, opens each manifest file, waits for
@@ -190,8 +190,7 @@ server. The fixes this verifier drove:
 - `lsp.filetypes` now includes `html`, `php`, `blade`, `eruby` and `ruby`, so
   Laravel, Rails and the Angular template attach.
 - `x18n/decorations` returns code usages for a component with an embedded
-  `<i18n>` block (merged in x18n 0.1.10, PR #129), so vue-vite `TodoList.vue`
-  renders its inline values.
+  `<i18n>` block, so vue-vite `TodoList.vue` renders its inline values.
 - Usages without an enclosing call (the `v-t` directive) no longer crash render;
   the fallback uses the key range (`lua/x18n/decorations.lua`).
 

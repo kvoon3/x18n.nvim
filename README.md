@@ -18,8 +18,8 @@ UI.
 - **Inline translations** — `t('app.title')` reads as `t(Hello x18n)` in the
   display locale, with static call params filled by the fork. Missing keys yield
   to the server's diagnostic.
-- **Locale files** — usage counts beside every key line from the fork, with
-  opt-in display-locale values.
+- **Locale files** — usage counts beside every key line, with opt-in
+  display-locale values.
 - **Native LSP** — completion, hover, rename, references, code lens and
   diagnostics, with all-locale completion docs.
 - **Navigation** — definition and usage lists, key and value search, locale
@@ -36,9 +36,8 @@ UI.
 The published server covers standard LSP, the shared `x18n/*` methods and
 all-locale completion docs. The `kvoon3/x18n` fork adds `x18n/keyInfo` and the
 fields behind the translations popup, copy translation, per-locale add menu,
-locale labels, usage badges and param-filled values. See
-[Compatibility](docs/compatibility.md) for the exact contract and every
-fallback.
+locale labels and param-filled values. See [Compatibility](docs/compatibility.md)
+for the exact contract and every fallback.
 
 ## Install
 
@@ -56,9 +55,8 @@ manage `vim.lsp.config('x18n', ...)` yourself, `decorations = false` to disable
 the inline annotations, or see [Configuration](docs/configuration.md) for every
 option.
 
-Usage counts and param-filled values come from the `kvoon3/x18n` fork; the
-published server keeps the native behavior described in
-[Compatibility](docs/compatibility.md).
+Param-filled values and the translations popup come from the `kvoon3/x18n`
+fork. See [Compatibility](docs/compatibility.md) for every server fallback.
 
 ## License
 

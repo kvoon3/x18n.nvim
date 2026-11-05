@@ -39,10 +39,10 @@ missing ones marked.
 Inside `en.json`, `ja.yml`, `zh-CN.json` and friends, each key line shows its
 usage count at the end of the line. The value is already in the file, so the
 display-locale value is opt-in: set `show_locale_file_eol_translation = true`
-or use `:X18nToggleLocaleFileEol`. When the server reports no usage counts (the
-published server), the value is shown automatically so the file still proves it
-was detected; `show_locale_file_eol_translation = false` turns that fallback
-off. `show_locale_file_eol_usage = false` hides the badge.
+or use `:X18nToggleLocaleFileEol`. When the server reports no usage counts, the
+value is shown automatically so the file still proves it was detected;
+`show_locale_file_eol_translation = false` turns that fallback off.
+`show_locale_file_eol_usage = false` hides the badge.
 
 ## Definition and usages
 
@@ -135,5 +135,5 @@ The plugin works with the published `@x18n/lsp` 0.1.10 for standard LSP, the
 shared `x18n/*` methods, completion docs and inline values in components with an
 embedded `<i18n>` block. The `kvoon3/x18n` fork adds `x18n/keyInfo` and the
 fields behind the translations popup, copy translation, per-locale add menu,
-locale labels, usage badges and param-filled values. See
-[Compatibility](compatibility.md) for the exact contract and every fallback.
+locale labels and param-filled values. See [Compatibility](compatibility.md) for
+the exact contract and every fallback.

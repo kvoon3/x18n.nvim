@@ -1,22 +1,16 @@
 # Roadmap
 
-## Now: upstream the fork additions
+## Now: upstream the param stack
 
-The small fixes shipped in upstream v0.1.10 (#127, #129, #130). The remaining
-delta goes upstream in this order.
+The remaining delta goes upstream in this order.
 
-- `feat(lsp): report usage counts in x18n/fileKeys` (PR 4). The Neovim
-  locale-file badge is the first consumer; the same field can drive VS Code and
-  Zed annotations. Screenshot and draft PR are next.
-- The param stack is held until the small PRs land:
-  - `feat(builtins): record static param values on usages` (PR 5) records string
-    literals and same-block string bindings on `Usage`.
-  - `feat(lsp): fill static call params into decoration and inlay-hint values`
-    (PR 6) fills simple placeholders in the displayed value.
-- `x18n/keyInfo` (PR 7) needs an issue to settle the method name and shape before
-  a PR.
-- The server entry mode (PR 8) is a packaging fix.
-- Rebase the fork onto v0.1.10 and drop the merged commits.
+- `feat(builtins): record static param values on usages` (PR 5) records string
+  literals and same-block string bindings on `Usage`.
+- `feat(lsp): fill static call params into decoration and inlay-hint values`
+  (PR 6) fills simple placeholders in the displayed value.
+- `x18n/keyInfo` (PR 7) is open as
+  [#135](https://github.com/x18n-dev/x18n/pull/135). Its param-filled values
+  wait for the param stack.
 - `make test` targets the published server; `make test-fork` covers the delta.
 
 Exit criteria: each addition is merged upstream and removed from the fork. The
@@ -47,16 +41,12 @@ until they ship.
 
 ## Done
 
-- Hover flush, component decorations and completion resolve merged upstream
-  (#127, #129, #130) and shipped in v0.1.10.
 - The plugin targets the published `@x18n/lsp` 0.1.10; the root
   devDependencies no longer link the fork, and the published server is the
   default test lane.
-- Fork synced to upstream `a44a460` (v0.1.9 plus one commit); the v0.1.10
-  rebase is pending.
 - Key details moved from standard hover to `x18n/keyInfo`.
 - Markdown hover fallback, locale index pairing and the `copy_translation`
   source fallback removed.
 - Static param values limited to string literals and same-block string bindings.
-- Upstream test lane added.
+- Published-server test lane added.
 - Locale-file annotations show the usage count; the display value is opt-in.

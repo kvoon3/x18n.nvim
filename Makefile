@@ -30,7 +30,7 @@ test:
 		if [ "$$t" != test/harness.lua ]; then $(NVIM) -l test/harness.lua "$$t"; fi; \
 	done
 
-# Run the same suite against a local kvoon3/x18n build, which adds
+# Run the same suite against a local kvoon3/x18n build, which includes
 # x18n/keyInfo, usage counts and param-filled values.
 test-fork:
 	@test -n "$$X18N_LSP_BIN" || { echo 'set X18N_LSP_BIN to the fork server binary, e.g. ~/f/x18n/packages/lsp/bin.mjs' >&2; exit 1; }

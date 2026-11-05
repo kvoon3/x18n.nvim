@@ -1,6 +1,6 @@
 # Server compatibility
 
-x18n.nvim talks to any x18n 0.1.10 server that implements the `x18n/*` protocol. The published `@x18n/lsp` 0.1.10 covers standard LSP, the shared custom methods, all-locale completion docs and inline values in components with an embedded `<i18n>` block. The `kvoon3/x18n` fork adds `x18n/keyInfo`, locale-file usage counts and param-filled values.
+x18n.nvim talks to any x18n 0.1.10 server that implements the `x18n/*` protocol. The published `@x18n/lsp` 0.1.10 covers standard LSP, the shared custom methods, all-locale completion docs and inline values in components with an embedded `<i18n>` block. The `kvoon3/x18n` fork adds `x18n/keyInfo` and param-filled values.
 
 ## Standard LSP and shared methods
 
@@ -20,12 +20,15 @@ The fork adds `x18n/keyInfo` and the fields below. Without it, the plugin falls 
 | Copy translation | `x18n/keyInfo` | notifies that `x18n/keyInfo` is required and copies nothing |
 | Per-locale add menu (`Ctrl+.`) | `x18n/keyInfo` | native code actions |
 | Locale labels in `:X18nDefinition` and `:X18nKeys choose_locale` | `keyInfo.locales[].present` | the quickfix and picker list definition files by name |
-| Usage badges in locale files | `x18n/fileKeys[].usages` | the display-locale value is shown instead (set `show_locale_file_eol_translation = false` to omit it) |
 | Param-filled inline values | filled `Decoration.value` | placeholders stay as written |
 | `param-mismatch` diagnostics for Vue I18n calls | param positions declared by the preset | the check stays quiet |
 
 Param filling rides on the preset's declared param positions, so the existing
 `param-mismatch` check also fires for Vue I18n calls on the fork.
+
+Locale-file usage badges need `x18n/fileKeys[].usages`. When the server reports
+no usage counts, the display-locale value is shown instead. Set
+`show_locale_file_eol_translation = false` to omit it.
 
 ## x18n/keyInfo
 
