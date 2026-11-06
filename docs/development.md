@@ -108,7 +108,10 @@ whatever state the examples have.
 
 `make test` uses the published `@x18n/lsp` 0.1.13 from the root
 devDependencies. Set `X18N_LSP_BIN` to run the same suite against another
-server binary. The same loop directly:
+server binary. The local fork build also fills static call params into
+`x18n/keyInfo`, so the translations popup shows the value the app renders.
+Published 0.1.13 fills decorations and inlay hints but returns the raw message
+from `x18n/keyInfo`. The same loop directly:
 
 ```sh
 for t in test/*.lua; do [ "$t" = test/harness.lua ] || nvim -l test/harness.lua "$t"; done

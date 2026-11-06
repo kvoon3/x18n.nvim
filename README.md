@@ -35,7 +35,8 @@ UI.
 
 The published server implements standard LSP and the full `x18n/*` protocol the
 plugin draws on, including `x18n/keyInfo`, locale-file usage counts and
-param-filled values. `:checkhealth x18n` reports the running version.
+param-filled inline annotations. `:checkhealth x18n` reports the running
+version.
 
 ## Install
 

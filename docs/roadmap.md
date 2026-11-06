@@ -23,10 +23,12 @@
 ## Done
 
 - Usage counts in `x18n/fileKeys` (#133), `x18n/keyInfo` (#135), static param
-  values and param-filled values (#139, #140), and the executable server entry
-  (#132) merged upstream and shipped in v0.1.11 through v0.1.13.
-- The plugin requires `@x18n/lsp` 0.1.13, drops the fork lane, the keyInfo probe
-  and every old-server fallback, and tests only against the published server.
+  values and param-filled decoration and inlay-hint values (#139, #140), and
+  the executable server entry (#132) merged upstream and shipped in v0.1.11
+  through v0.1.13.
+- The plugin requires `@x18n/lsp` 0.1.13 and drops the keyInfo probe, the
+  old-server fallbacks and the dedicated fork test target. The suite runs
+  against the published server; `X18N_LSP_BIN` still points it at a fork build.
 - Hover flush, component decorations and completion resolve merged upstream
   (#127, #129, #130) and shipped in v0.1.10.
 - Key details moved from standard hover to `x18n/keyInfo`.

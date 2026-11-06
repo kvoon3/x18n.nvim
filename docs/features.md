@@ -129,5 +129,5 @@ picker of choice. Definitions use the quickfix, like references.
 
 The plugin requires the published `@x18n/lsp` 0.1.13 or newer. That release
 ships standard LSP, the `x18n/*` protocol, `x18n/keyInfo`, locale-file usage
-counts and param-filled values. `:checkhealth x18n` reports the running server
-version and flags an older one.
+counts and param-filled inline annotations. `:checkhealth x18n` reports the
+running server version and flags an older one.
