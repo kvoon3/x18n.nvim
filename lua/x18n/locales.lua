@@ -95,7 +95,7 @@ function M.set_display(locale)
   M.warm()
 end
 
---- The key details at a position, when the server provides them.
+--- The key details at a position.
 ---@param client vim.lsp.Client
 ---@param uri string
 ---@param position table LSP position, already in UTF-16 columns

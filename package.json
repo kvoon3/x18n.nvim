@@ -3,7 +3,7 @@
   "private": true,
   "description": "Development dependencies only: the x18n CLI and language server used by the tests and the playground check. The plugin has no Node runtime dependency.",
   "devDependencies": {
-    "@x18n/cli": "0.1.10",
-    "@x18n/lsp": "0.1.10"
+    "@x18n/cli": "0.1.13",
+    "@x18n/lsp": "0.1.13"
   }
 }

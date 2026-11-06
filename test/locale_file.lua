@@ -31,13 +31,8 @@ for _, m in ipairs(marks) do
   texts[#texts + 1] = m[4].virt_text[1][1]
 end
 local joined = table.concat(texts, '\n')
-if ctx.upstream then
-  assert(joined:find('Hello x18n', 1, true), 'expected en value at EOL: ' .. joined)
-  assert(not joined:find('usage', 1, true), 'upstream EOL text claims a usage badge: ' .. joined)
-else
-  assert(joined:find('1 usage', 1, true), 'expected usage badges at EOL: ' .. joined)
-  assert(not joined:find('Hello x18n', 1, true), 'default EOL annotation should not repeat the value: ' .. joined)
-end
+assert(joined:find('1 usage', 1, true), 'expected usage badges at EOL: ' .. joined)
+assert(not joined:find('Hello x18n', 1, true), 'default EOL annotation should not repeat the value: ' .. joined)
 
 local function eol_text()
   local out = {}
@@ -47,22 +42,20 @@ local function eol_text()
   return table.concat(out, '\n')
 end
 
-if not ctx.upstream then
-  decorations.setup {
-    mode = 'conceal',
-    debounce_ms = 100,
-    show_locale_file_eol_translation = true,
-    show_locale_file_eol_usage = true,
-  }
-  decorations.refresh_attached()
-  assert(
-    ctx.wait_for(function()
-      local text = eol_text()
-      return text:find('Hello x18n', 1, true) ~= nil and text:find('1 usage', 1, true) ~= nil
-    end, 5000),
-    'opt-in value annotation did not appear: ' .. eol_text()
-  )
-end
+decorations.setup {
+  mode = 'conceal',
+  debounce_ms = 100,
+  show_locale_file_eol_translation = true,
+  show_locale_file_eol_usage = true,
+}
+decorations.refresh_attached()
+assert(
+  ctx.wait_for(function()
+    local text = eol_text()
+    return text:find('Hello x18n', 1, true) ~= nil and text:find('1 usage', 1, true) ~= nil
+  end, 5000),
+  'opt-in value annotation did not appear: ' .. eol_text()
+)
 
 local display_values = {
   en = { 'Hello x18n', 'A playground for x18n.nvim' },
@@ -97,7 +90,7 @@ assert(
     local text = eol_text()
     return not text:find(next_title, 1, true)
       and not text:find(next_description, 1, true)
-      and (ctx.upstream or text:find('usage', 1, true) ~= nil)
+      and text:find('usage', 1, true) ~= nil
   end, 5000),
   'EOL translation toggle changed the usage badges: ' .. eol_text()
 )

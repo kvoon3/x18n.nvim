@@ -8,7 +8,7 @@ require('x18n').setup {
   decorations = {
     enabled = true,
     mode = 'conceal', -- conceal | both | translation | translation_conceal | origin | inline | eol
-    show_locale_file_eol_translation = nil, -- nil: value only when the server lacks usage counts; true/false force it
+    show_locale_file_eol_translation = false, -- add the display-locale value after the usage count
     show_locale_file_eol_usage = true,
     debounce_ms = 400,
     cursor_redraw_ms = 100,
@@ -65,8 +65,8 @@ suppresses them and clears the ones already shown; a table is forwarded to
 
 Locale flags come from the server. Set `lsp.init_options.showFlags = false` to
 show locale codes only, for terminals whose emoji font lacks a flag. The setting
-affects standard hover and completion docs; with the fork it also affects the
-translations popup. Quickfix definitions use the locale codes.
+affects standard hover, completion docs and the translations popup. Quickfix
+definitions use the locale codes.
 
 ## Reloading
 

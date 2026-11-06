@@ -23,8 +23,8 @@ assert(got.value:find('app%.title', 1, false), 'hover lost the key')
 assert(not got.value:find('command:', 1, true), 'command links not stripped')
 assert(got.value:find('1 usage', 1, true), 'usage count missing')
 assert(got.value:find('| 🇺🇸 en | Hello x18n |', 1, true), 'locale table row missing: ' .. got.value)
-assert(not got.value:find('**en**', 1, true), 'fork-only bullet format leaked: ' .. got.value)
-assert(got.result.x18n == nil, 'standard hover carried the fork-only x18n field')
+assert(not got.value:find('**en**', 1, true), 'legacy bullet format leaked: ' .. got.value)
+assert(got.result.x18n == nil, 'standard hover carried the legacy x18n field')
 for _, value in ipairs { 'Hello x18n', '你好 x18n', 'こんにちは x18n', 'Bonjour x18n' } do
   assert(got.value:find(value, 1, true), 'hover lost ' .. value .. ': ' .. got.value)
 end

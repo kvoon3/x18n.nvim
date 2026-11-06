@@ -21,13 +21,9 @@ Prerequisites:
 
 - Neovim 0.11+ and Node on `PATH`.
 - Root dev dependencies installed: `npm install` at the repo root. This pins
-  the published `@x18n/lsp` 0.1.10, the default server.
+  the published `@x18n/lsp` 0.1.13, the default server.
 - The playground present: `playground/vue-vite`, `react-i18next`, `next-intl`,
   `laravel`, `rails`, `angular`, `monorepo`, `i18n-ally`.
-
-To verify the fork-only features (keyInfo popup data, param-filled values,
-locale-file usage counts), build the fork and export
-`X18N_LSP_BIN=~/f/x18n/packages/lsp/bin.mjs` before any script below.
 
 There is no long-lived app process. "Launch" is one headless nvim per project,
 started by the wrapper; it copies the project, opens each manifest file, waits for
@@ -184,7 +180,7 @@ feature map Gotchas if it uses a new filetype or locale layout.
 
 ## Current baseline (2026-11-04)
 
-All eight playgrounds pass against the published `@x18n/lsp` 0.1.10, the default
+All eight playgrounds pass against the published `@x18n/lsp` 0.1.13, the default
 server. The fixes this verifier drove:
 
 - `lsp.filetypes` now includes `html`, `php`, `blade`, `eruby` and `ruby`, so

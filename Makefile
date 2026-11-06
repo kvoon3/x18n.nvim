@@ -1,7 +1,7 @@
 LUA_DIRS := lua plugin test scripts .claude/skills/verify-x18n-nvim/scripts
 NVIM ?= nvim
 
-.PHONY: all check comment-lint format format-check hooks hygiene lint ls-lint test test-fork typecheck workflow-lint
+.PHONY: all check comment-lint format format-check hooks hygiene lint ls-lint test typecheck workflow-lint
 
 all: check
 
@@ -36,17 +36,9 @@ lint: ls-lint comment-lint typecheck workflow-lint hygiene
 ls-lint:
 	ls-lint
 
-# The root devDependency (@x18n/lsp 0.1.10) is the default server. The harness
-# skips tests for features that server does not implement.
+# The root devDependency (@x18n/lsp 0.1.13) is the default server; set
+# X18N_LSP_BIN to run against another binary.
 test:
 	@set -e; for t in test/*.lua; do \
 		if [ "$$t" != test/harness.lua ]; then $(NVIM) -l test/harness.lua "$$t"; fi; \
-	done
-
-# Run the same suite against a local kvoon3/x18n build, which adds
-# x18n/keyInfo, usage counts and param-filled values.
-test-fork:
-	@test -n "$$X18N_LSP_BIN" || { echo 'set X18N_LSP_BIN to the fork server binary, e.g. ~/f/x18n/packages/lsp/bin.mjs' >&2; exit 1; }
-	@set -e; for t in test/*.lua; do \
-		if [ "$$t" != test/harness.lua ]; then X18N_LSP_BIN=$$X18N_LSP_BIN $(NVIM) -l test/harness.lua "$$t"; fi; \
 	done

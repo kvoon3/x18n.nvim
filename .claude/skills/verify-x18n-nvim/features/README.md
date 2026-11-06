@@ -7,9 +7,8 @@ matching feature file as the recipe.
 ## Baseline preconditions
 
 - Run from the repository root; dependencies installed with `npm install`.
-- The default server is the published `@x18n/lsp` 0.1.10 from the root
-  devDependencies. For fork-only features, build the fork and export
-  `X18N_LSP_BIN=~/f/x18n/packages/lsp/bin.mjs`.
+- The default server is the published `@x18n/lsp` 0.1.13 from the root
+  devDependencies. Set `X18N_LSP_BIN` to exercise another server binary.
 - `playground/` holds the upstream examples (`scripts/sync-playground.sh`).
 - `scripts/doctor.sh` prints `ready`.
 - Every journey starts from a clean temp copy of the project. The wrapper copies
@@ -50,7 +49,7 @@ matching feature file as the recipe.
 
 ## Current baseline (2026-11-04)
 
-All eight pass against the published `@x18n/lsp` 0.1.10, the default server,
+All eight pass against the published `@x18n/lsp` 0.1.13, the default server,
 after the filetype and embedded-`<i18n>` fixes. A later failure is a regression
 unless the playground itself changed.
 

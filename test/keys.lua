@@ -1,23 +1,4 @@
 local ctx = ...
-if ctx.upstream then
-  local keys = require 'x18n.keys'
-  vim.ui.select = function(items, _, on_choice)
-    for _, item in ipairs(items) do
-      if item.key == 'app.title' then
-        return on_choice(item)
-      end
-    end
-    on_choice(nil)
-  end
-  vim.fn.setreg('+', '')
-  keys.pick 'copy_translation'
-  vim.wait(1000, function()
-    return false
-  end, 50)
-  assert(vim.fn.getreg '+' == '', 'copy_translation copied without keyInfo: ' .. vim.fn.getreg '+')
-  print 'keys fallback ok'
-  return
-end
 local keys = require 'x18n.keys'
 local actions = require 'x18n.actions'
 

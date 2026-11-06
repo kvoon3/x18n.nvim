@@ -43,8 +43,7 @@ make typecheck     # lua-language-server over lua/ and plugin/
 make workflow-lint # actionlint over .github/workflows
 make hygiene       # whitespace, merge markers, final newlines, file size
 make lint          # ls-lint + comment lint + typecheck + workflow lint + hygiene
-make test          # headless test suite, published server
-make test-fork     # same suite, fork server from X18N_LSP_BIN
+make test          # headless test suite against the published server
 make check         # format-check + lint + test
 ```
 
@@ -81,8 +80,7 @@ stub marks the argument as required; the buffers are plain text.
 
 `.github/workflows/ci.yml` runs `make check` on pushes to `main`, pull requests
 and manual dispatches. mise installs the pinned toolchain, `npm ci` installs the
-published server, and the suite runs against it. The fork lane stays local
-because it needs `X18N_LSP_BIN`.
+published server, and the suite runs against it.
 
 Style lives in `.stylua.toml`: LuaJIT syntax, two-space indent, 120 columns,
 single quotes, no call parentheses.
@@ -108,20 +106,9 @@ The headless test suite runs against the real server. Each test copies
 `test/fixture` to a temp directory and runs there, so `playground/` keeps
 whatever state the examples have.
 
-`make test` uses the published `@x18n/lsp` from the root devDependencies. The
-harness probes `x18n/keyInfo`; tests for fork-only features print
-`skipped, needs the x18n fork`. Everything else must pass.
-
-The fork is a second lane. Build it (`pnpm --filter @x18n/lsp build`) and point
-`X18N_LSP_BIN` at its server entry, so keyInfo, usage badges and param-filled
-values are exercised too:
-
-```sh
-X18N_LSP_BIN=~/f/x18n/packages/lsp/bin.mjs make test-fork
-```
-
-`make test` honors `X18N_LSP_BIN` as well; point it at any other server binary
-to change the lane. The same loop directly:
+`make test` uses the published `@x18n/lsp` 0.1.13 from the root
+devDependencies. Set `X18N_LSP_BIN` to run the same suite against another
+server binary. The same loop directly:
 
 ```sh
 for t in test/*.lua; do [ "$t" = test/harness.lua ] || nvim -l test/harness.lua "$t"; done
