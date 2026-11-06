@@ -42,7 +42,6 @@ local lsp = require 'x18n.lsp'
 
 ---@class x18n.LocaleEol
 ---@field explicit boolean?
----@field shown boolean
 ---@field usage boolean
 
 ---@class x18n.DecorationsConfig
@@ -90,7 +89,7 @@ local state = {
   buffers = {},
   windows = { baseline = {}, raised = {}, last_baseline = nil },
   cursor_timer = nil,
-  eol = { explicit = nil, shown = false, usage = true },
+  eol = { explicit = nil, usage = true },
 }
 
 local windows = {}
@@ -466,17 +465,7 @@ local function render_locale_file(bufnr, result)
   local view = view_for(bufnr)
   view.class = 'locale'
   local keys = result and result.keys or {}
-  local has_usages = false
-  for _, k in ipairs(keys) do
-    if k.usages ~= nil then
-      has_usages = true
-      break
-    end
-  end
-  local show_value = state.eol.explicit == true or (state.eol.explicit == nil and not has_usages)
-  if #keys > 0 then
-    state.eol.shown = show_value
-  end
+  local show_value = state.eol.explicit == true
   for _, k in ipairs(keys) do
     local segments = {}
     if show_value then
@@ -627,22 +616,17 @@ function M.toggle_locale_file_eol()
     return false
   end
   state.eol.explicit = not M.locale_file_eol()
-  state.eol.shown = state.eol.explicit
   M.refresh_attached()
   return state.eol.explicit
 end
 
---- The effective state: an explicit setting wins, auto follows the server's
---- ability to report usage counts (the last locale render answers it).
+--- The effective state.
 ---@return boolean
 function M.locale_file_eol()
   if not state.cfg.debounce_ms then
     return false
   end
-  if state.eol.explicit ~= nil then
-    return state.eol.explicit
-  end
-  return state.eol.shown
+  return state.eol.explicit == true
 end
 
 --- Switch the display mode. Unknown modes leave the current one in place.
@@ -788,7 +772,6 @@ function M.setup(opts)
   end
   state.last_non_origin = mode_key(state.cfg.mode) or 'both'
   state.eol.explicit = state.cfg.show_locale_file_eol_translation
-  state.eol.shown = state.eol.explicit == true
   state.eol.usage = state.cfg.show_locale_file_eol_usage ~= false
   state.enabled = true
   define_highlights()

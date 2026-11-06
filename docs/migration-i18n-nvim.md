@@ -21,10 +21,10 @@ mapping:
 | `i18n_definition()` | `:X18nDefinition` or `require('x18n.actions').definition()`; lists the locale definitions in the quickfix (a single definition jumps directly) |
 | `:I18nKeyUsages` | `:X18nKeyUsages` |
 | `:I18nAddKey` | `Ctrl+.` per-locale code actions, or `:X18nAddKey` for the batch prompt (refuses keys that already exist; edits stay unsaved for review) |
-| `i18n_keys` picker | `:X18nKeys [action]` with `jump`, `split`, `vsplit`, `tab`, `copy`, `copy_translation` (needs the fork) and `choose_locale`; the list shows key and source value, and the translations popup shows the rest |
+| `i18n_keys` picker | `:X18nKeys [action]` with `jump`, `split`, `vsplit`, `tab`, `copy`, `copy_translation` and `choose_locale`; the list shows key and source value, and the translations popup shows the rest |
 | `navigation.open_cmd` | the same option |
 | `diagnostic = false` or a table | the same option |
-| locale-file EOL and usage badges | both on by default (the value falls back automatically when the server has no counts); `:X18nToggleLocaleFileEol` and `show_locale_file_eol_usage` are independent |
+| locale-file EOL and usage badges | the usage badge is on by default and the value is opt-in; `:X18nToggleLocaleFileEol` and `show_locale_file_eol_usage` are independent |
 | diagnostics | native LSP diagnostics from the server |
 | blink.cmp / nvim-cmp source | native LSP completion: items carry the source value as detail, replace the key slot and resolve to the all-locale documentation panel |
 | fzf-lua / telescope / snacks pickers | `vim.ui.select`, so snacks, telescope-ui-select or dressing render them |

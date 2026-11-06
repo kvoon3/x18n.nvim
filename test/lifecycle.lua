@@ -2,15 +2,6 @@ local ctx = ...
 local lifecycle = require 'x18n.lifecycle'
 local ns = require('x18n.decorations').namespace()
 
-if ctx.upstream then
-  require('x18n.decorations').setup {
-    mode = 'conceal',
-    debounce_ms = 100,
-    show_locale_file_eol_translation = true,
-    show_locale_file_eol_usage = true,
-  }
-end
-
 vim.cmd 'runtime! plugin/x18n.lua'
 
 local function clients(bufnr)

@@ -1,8 +1,4 @@
 local ctx = ...
-if ctx.upstream then
-  print 'skipped, needs the x18n fork'
-  return
-end
 local client = require('x18n').get_client()
 local util = require 'x18n.util'
 

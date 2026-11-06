@@ -26,9 +26,7 @@
 | `:X18nExplain` | Show how the server understood the workspace |
 | `:X18nOpenUi` | Open the x18n web UI in the browser |
 
-Features that need the `kvoon3/x18n` fork are listed in
-[Compatibility](compatibility.md). The shared commands work with the published
-server.
+Every command works against the published `@x18n/lsp` 0.1.13 or newer.
 
 ## Lua API
 

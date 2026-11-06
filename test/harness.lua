@@ -65,39 +65,11 @@ if not decorations_disabled then
   end)
 end
 
-local function key_info_available()
-  local client = vim.lsp.get_clients({ name = 'x18n' })[1]
-  if not client then
-    return false
-  end
-  local done, supported = false, false
-  client:request('x18n/keyInfo', {
-    uri = vim.uri_from_bufnr(0),
-    position = { line = 0, character = 0 },
-  }, function(err)
-    supported = err == nil
-    done = true
-  end)
-  assert(
-    wait_for(function()
-      return done
-    end, 5000),
-    'x18n/keyInfo probe timed out'
-  )
-  return supported
-end
-
-local upstream = not key_info_available()
-if upstream then
-  print 'server has no x18n/keyInfo: fork-only tests skip'
-end
-
 local chunk = assert(loadfile(script))
 chunk {
   playground = playground_fixture,
   plugin_root = plugin_root,
   wait_for = wait_for,
   buf = vim.api.nvim_get_current_buf(),
-  upstream = upstream,
 }
 vim.cmd 'qa!'

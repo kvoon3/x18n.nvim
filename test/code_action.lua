@@ -1,9 +1,4 @@
 local ctx = ...
-if ctx.upstream then
-  assert(require('x18n.actions').code_action() == false, 'code_action should decline without keyInfo')
-  print 'code action fallback ok'
-  return
-end
 
 local function cursor_onto(pattern)
   local buf = vim.api.nvim_get_current_buf()

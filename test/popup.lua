@@ -1,8 +1,4 @@
 local ctx = ...
-if ctx.upstream then
-  print 'skipped, needs the x18n fork'
-  return
-end
 local actions = require 'x18n.actions'
 
 local function cursor_onto(buf, pattern)

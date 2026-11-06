@@ -8,10 +8,9 @@ the custom `x18n/*` protocol as editor UI.
 ## Inline translations
 
 The key reads as its value, `t('app.title')` renders as `t(Hello x18n)`, in the
-display locale of your choice. With the fork, static call params fill the
-message placeholders, so `t('app.greeting', { name: 'Ada' })` reads
-`t(Hello Ada!)`; a param the scanner cannot resolve keeps its placeholder as
-written.
+display locale of your choice. Static call params fill the message placeholders,
+so `t('app.greeting', { name: 'Ada' })` reads `t(Hello Ada!)`; a param the
+scanner cannot resolve keeps its placeholder as written.
 
 The cursor's line falls back to the raw key with the value at the end of the
 line, so what you edit stays visible. Modes cover both worlds:
@@ -39,19 +38,16 @@ missing ones marked.
 Inside `en.json`, `ja.yml`, `zh-CN.json` and friends, each key line shows its
 usage count at the end of the line. The value is already in the file, so the
 display-locale value is opt-in: set `show_locale_file_eol_translation = true`
-or use `:X18nToggleLocaleFileEol`. When the server reports no usage counts (the
-published server), the value is shown automatically so the file still proves it
-was detected; `show_locale_file_eol_translation = false` turns that fallback
-off. `show_locale_file_eol_usage = false` hides the badge.
+or use `:X18nToggleLocaleFileEol`. `show_locale_file_eol_usage = false` hides
+the badge.
 
 ## Definition and usages
 
 On x18n buffers `gd` lists the key's locale definitions in the quickfix, the
 same list as `grr`, and jumps to the chosen entry (a single definition jumps
-directly); `:X18nDefinition` does the same from the command line. With the fork
-each entry is labeled with its locale; without it, the entry shows the file
-name. `:X18nKeyUsages` jumps to the key's usages, with a picker when several
-files use it.
+directly); `:X18nDefinition` does the same from the command line. Each entry is
+labeled with its locale. `:X18nKeyUsages` jumps to the key's usages, with a
+picker when several files use it.
 
 ## Usage report
 
@@ -129,11 +125,9 @@ The key, search and usage pickers go through `vim.ui.select`, so
 or [snacks.nvim](https://github.com/folke/snacks.nvim) render them in your
 picker of choice. Definitions use the quickfix, like references.
 
-## Server compatibility
+## Server
 
-The plugin works with the published `@x18n/lsp` 0.1.10 for standard LSP, the
-shared `x18n/*` methods, completion docs and inline values in components with an
-embedded `<i18n>` block. The `kvoon3/x18n` fork adds `x18n/keyInfo` and the
-fields behind the translations popup, copy translation, per-locale add menu,
-locale labels, usage badges and param-filled values. See
-[Compatibility](compatibility.md) for the exact contract and every fallback.
+The plugin requires the published `@x18n/lsp` 0.1.13 or newer. That release
+ships standard LSP, the `x18n/*` protocol, `x18n/keyInfo`, locale-file usage
+counts and param-filled values. `:checkhealth x18n` reports the running server
+version and flags an older one.

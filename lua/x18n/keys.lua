@@ -84,7 +84,7 @@ local actions = {
   copy_translation = function(entry, client)
     key_info(client, entry, function(info)
       if not info then
-        return notify('copy_translation needs x18n/keyInfo (kvoon3/x18n fork)', vim.log.levels.WARN)
+        return notify('could not read translations for ' .. entry.key, vim.log.levels.WARN)
       end
       local display = locales.display_locale()
       if not display then
