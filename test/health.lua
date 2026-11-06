@@ -1,4 +1,4 @@
-local _ = ...
+local ctx = ...
 
 local reports = {}
 local function record(level)
@@ -19,6 +19,10 @@ assert(client, 'no x18n client')
 local version = client.server_info and client.server_info.version
 assert(version, 'server reported no version')
 local text = table.concat(reports, '\n')
+assert(
+  text:find('ok: plugin ' .. ctx.plugin_root, 1, true),
+  'health did not report the plugin directory ' .. ctx.plugin_root .. ': ' .. text
+)
 assert(text:find('x18n-lsp ' .. version, 1, true), 'health did not report the server version: ' .. text)
 assert(not text:find('older than', 1, true), 'health flagged the current server as old: ' .. text)
 print('health ok: ' .. version)

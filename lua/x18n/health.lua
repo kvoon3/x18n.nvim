@@ -28,6 +28,12 @@ end
 function M.check()
   vim.health.start 'x18n.nvim'
 
+  local source = debug.getinfo(1, 'S').source
+  if source:sub(1, 1) == '@' then
+    local root = vim.fn.fnamemodify(source:sub(2), ':h:h:h')
+    vim.health.ok('plugin ' .. root)
+  end
+
   if vim.fn.has 'nvim-0.11' == 1 then
     vim.health.ok 'Neovim 0.11 or newer'
   else
