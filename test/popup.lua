@@ -42,7 +42,7 @@ for _, value in ipairs { '你好 x18n', 'こんにちは x18n', 'Bonjour x18n' }
 end
 assert(not text:find('|', 1, true), 'raw markdown pipes leaked: ' .. text)
 assert(not text:find('%5B', 1, true), 'encoded command link leaked: ' .. text)
-assert(text:find('usage', 1, true), 'usage line missing')
+assert(text:find('x18n app%.title · 1 usage', 1, false), 'title lost the usage count: ' .. text)
 
 local fbuf = hover_buf()
 assert(
@@ -116,6 +116,39 @@ for _, value in ipairs {
   assert(cjk_text:find(value, 1, true), 'description popup lost ' .. value .. ': ' .. cjk_text)
 end
 close_hover()
+
+local render = require('x18n.key_info').render
+local rendered = table.concat(
+  render {
+    key = 'app.title',
+    label = 'Page title',
+    usages = 2,
+    threads = {},
+    locales = {
+      { code = 'en', flag = '🇺🇸', value = 'Hello', source = true, present = true, changed = '3 days ago' },
+      { code = 'fr', flag = '🇫🇷', value = 'Bonjour', present = true, changed = '2 hours ago' },
+      { code = 'ja', flag = '🇯🇵', present = false, changed = '3 days ago' },
+      { code = 'de', flag = '🇩🇪', value = '', present = true },
+      { code = 'es', flag = '🇪🇸', value = 'Hola', present = true, outdated = true },
+      { code = 'it', flag = '🇮🇹', value = 'Ciao', present = true, state = 'broken-interpolation' },
+      { code = 'pt', flag = '🇵🇹', present = true },
+      { code = 'nl', flag = '🇳🇱', value = 'Regel een\nRegel twee', present = true },
+    },
+  },
+  '\n'
+)
+assert(rendered:find('x18n app.title Page title · 2 usages', 1, true), 'title lost the usage count: ' .. rendered)
+assert(not rendered:find('ago', 1, true), 'change timestamps leaked: ' .. rendered)
+assert(not rendered:find('_missing_', 1, true), 'markdown marker leaked: ' .. rendered)
+assert(rendered:find('en (source)', 1, true), 'source tag missing: ' .. rendered)
+assert(rendered:find('es (outdated)', 1, true), 'outdated tag missing: ' .. rendered)
+assert(rendered:find('— missing', 1, true), 'missing marker missing: ' .. rendered)
+assert(rendered:find('— empty', 1, true), 'empty marker missing: ' .. rendered)
+assert(rendered:find('— no value', 1, true), 'no-value marker missing: ' .. rendered)
+assert(rendered:find('Ciao (broken interpolation)', 1, true), 'state suffix missing: ' .. rendered)
+assert(rendered:find('Regel een Regel twee', 1, true), 'multiline value not flattened: ' .. rendered)
+local unused = table.concat(render { key = 'app.unused', usages = 0, threads = {}, locales = {} }, '\n')
+assert(unused:find('x18n app.unused · no usages', 1, true), 'zero usage wording wrong: ' .. unused)
 
 local function float_with(content_pattern)
   for _, w in ipairs(vim.api.nvim_list_wins()) do

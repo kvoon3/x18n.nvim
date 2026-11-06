@@ -7,44 +7,45 @@ function M.render(info)
   if info.label and info.label ~= '' then
     title = title .. ' ' .. info.label
   end
-  local out = { title }
+  local usages = info.usages or 0
+  local usage = usages == 0 and 'no usages' or ('%d usage%s'):format(usages, usages == 1 and '' or 's')
+  local out = { title .. ' · ' .. usage }
   if #info.locales > 0 then
     out[#out + 1] = ''
     local rows = {}
     for _, l in ipairs(info.locales) do
-      local suffix = l.source and ' (source)' or ''
-      if l.changed and l.changed ~= '' then
-        suffix = suffix .. ' · ' .. l.changed
+      local tags = {}
+      if l.source then
+        tags[#tags + 1] = 'source'
       end
       if l.outdated then
-        suffix = suffix .. ' · outdated'
+        tags[#tags + 1] = 'outdated'
+      end
+      local name = l.flag and l.flag ~= '' and (l.flag .. ' ' .. l.code) or l.code
+      if #tags > 0 then
+        name = ('%s (%s)'):format(name, table.concat(tags, ', '))
       end
       local value
       if not l.present then
-        value = '_missing_'
+        value = '— missing'
       elseif l.value == nil then
-        value = '_no value_'
+        value = '— no value'
       elseif l.value == '' then
-        value = '_empty_'
+        value = '— empty'
       else
-        value = l.value
+        value = l.value:gsub('[\r\n]+', ' ')
       end
       if l.state and l.state ~= '' then
         value = value .. ' (' .. l.state:gsub('%-', ' ') .. ')'
       end
-      rows[#rows + 1] = {
-        ('%s %s%s'):format(l.flag or '', l.code, suffix),
-        value,
-      }
+      rows[#rows + 1] = { name, value }
     end
-    local w = { 1, 2 }
-    for _, r in ipairs(rows) do
-      for c = 1, 2 do
-        w[c] = math.max(w[c], vim.fn.strdisplaywidth(r[c]))
-      end
+    local width = 1
+    for _, row in ipairs(rows) do
+      width = math.max(width, vim.fn.strdisplaywidth(row[1]))
     end
-    for _, r in ipairs(rows) do
-      out[#out + 1] = (r[1] .. string.rep(' ', w[1] - vim.fn.strdisplaywidth(r[1]) + 2) .. r[2]):gsub('%s+$', '')
+    for _, row in ipairs(rows) do
+      out[#out + 1] = (row[1] .. string.rep(' ', width - vim.fn.strdisplaywidth(row[1]) + 2) .. row[2]):gsub('%s+$', '')
     end
   end
   if #info.threads > 0 then
@@ -53,8 +54,6 @@ function M.render(info)
       out[#out + 1] = ('review %s: %s'):format(t.locale, t.state)
     end
   end
-  out[#out + 1] = ''
-  out[#out + 1] = ('%d usage%s'):format(info.usages, info.usages == 1 and '' or 's')
   return out
 end
 
