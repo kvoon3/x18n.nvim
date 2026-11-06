@@ -530,11 +530,22 @@ local function retry_warm_up(bufnr, client, view)
   return true
 end
 
+--- x18n's own config is metadata, not a translation source.
+---@param bufnr integer
+---@return boolean
+local function is_config_buffer(bufnr)
+  return vim.fs.basename(vim.api.nvim_buf_get_name(bufnr)):match '^x18n%.config%.' ~= nil
+end
+
 --- Issue the decoration request for (bufnr, client) with debounce and warm-up retry.
 --- The client is passed in: during LspAttach the buffer is not yet in the client's
 --- attached list, so a get_clients({ bufnr }) lookup races and silently drops.
 function M.request(bufnr, client)
   if not state.enabled or not state.cfg.debounce_ms then
+    return
+  end
+  if is_config_buffer(bufnr) then
+    clear(bufnr)
     return
   end
   local view = view_for(bufnr)
