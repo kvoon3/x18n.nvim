@@ -78,8 +78,11 @@ files that define it.
 
 ## Translations popup
 
-Every locale of the key under the cursor in one float, with usage counts and a
-copy-key mapping inside the float.
+Every locale of the key under the cursor in one float. The title carries the
+usage count; each row marks the source locale, outdated translations, and
+missing or empty values. The change history the server reports is left out, so
+the panel stays focused on what the key currently says. A copy-key mapping
+lives inside the float.
 
 ## Extract hard strings
 
