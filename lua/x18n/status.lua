@@ -1,5 +1,7 @@
 local M = {}
 
+local lsp = require 'x18n.lsp'
+
 local function locale_lines(project, progress)
   local coverage = {}
   if progress then
@@ -37,7 +39,7 @@ function M.show()
 
   local progress = nil
   local done = false
-  client:request('x18n/progress', {}, function(err, result)
+  lsp.custom_request(client, 'x18n/progress', {}, function(err, result)
     progress = err and nil or result
     done = true
   end)
@@ -60,7 +62,7 @@ function M.show()
     lines[#lines + 1] = '  show mode ' .. decorations.get_mode()
     lines[#lines + 1] = '  locale-file EOL ' .. (decorations.locale_file_eol() and 'on' or 'off')
   end
-  vim.lsp.util.open_floating_preview(lines, nil, {
+  vim.lsp.util.open_floating_preview(lines, '', {
     focus_id = 'x18n/status',
     close_events = {},
   })

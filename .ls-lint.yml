@@ -12,6 +12,7 @@ ignore:
   - .audit
   - .claude
   - .git
+  - .github
   - node_modules
   - playground
   - test/fixture

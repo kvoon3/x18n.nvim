@@ -1,5 +1,7 @@
 local M = {}
 
+local lsp = require 'x18n.lsp'
+
 local info = nil
 local warming = false
 local display_override = nil
@@ -13,7 +15,7 @@ function M.warm()
     return
   end
   warming = true
-  client:request('x18n/projects', {}, function(err, result)
+  lsp.custom_request(client, 'x18n/projects', {}, function(err, result)
     warming = false
     if not err then
       info = result
@@ -33,7 +35,7 @@ function M.projects(force)
     return nil
   end
   local done = false
-  client:request('x18n/projects', {}, function(err, result)
+  lsp.custom_request(client, 'x18n/projects', {}, function(err, result)
     info = err and nil or result
     done = true
   end)
@@ -99,7 +101,7 @@ end
 ---@param position table LSP position, already in UTF-16 columns
 ---@param on_result fun(info: table?)
 function M.key_info(client, uri, position, on_result)
-  client:request('x18n/keyInfo', {
+  lsp.custom_request(client, 'x18n/keyInfo', {
     uri = uri,
     position = position,
   }, function(err, result)

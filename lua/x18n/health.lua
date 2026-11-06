@@ -1,5 +1,7 @@
 local M = {}
 
+local lsp = require 'x18n.lsp'
+
 function M.check()
   vim.health.start 'x18n.nvim'
 
@@ -27,7 +29,7 @@ function M.check()
     end
     if bufnr then
       local done, supported = false, nil
-      clients[1]:request('x18n/keyInfo', {
+      lsp.custom_request(clients[1], 'x18n/keyInfo', {
         uri = vim.uri_from_bufnr(bufnr),
         position = { line = 0, character = 0 },
       }, function(err)

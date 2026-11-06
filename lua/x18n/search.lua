@@ -1,5 +1,7 @@
 local M = {}
 
+local lsp = require 'x18n.lsp'
+
 function M.select(items)
   local init = require 'x18n'
   if #items == 0 then
@@ -31,7 +33,7 @@ function M.run(query)
   if not client then
     return
   end
-  client:request('x18n/search', { query = query }, function(err, result)
+  lsp.custom_request(client, 'x18n/search', { query = query }, function(err, result)
     if err then
       return require('x18n').notify(err.message, vim.log.levels.WARN)
     end

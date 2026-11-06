@@ -1,7 +1,7 @@
 local ctx = ...
 
 local main = ctx.playground .. '/src/main.js'
-local plain = '/Users/kvoon/i/x18n.nvim/README.md'
+local plain = ctx.plugin_root .. '/README.md'
 
 local function level(win)
   return vim.wo[win].conceallevel

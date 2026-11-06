@@ -1,6 +1,7 @@
 local M = {}
 
 local util = require 'x18n.util'
+local lsp = require 'x18n.lsp'
 
 ---@alias x18n.ShowMode 'both'|'translation'|'translation_conceal'|'origin'|'conceal'|'eol'
 ---@alias x18n.ModeInput x18n.ShowMode|'inline'
@@ -27,8 +28,8 @@ local util = require 'x18n.util'
 ---@alias x18n.FileClass 'unknown'|'warming'|'code'|'locale'|'plain'
 
 ---@class x18n.BufferView
----@field timer uv_timer_t?
----@field retry uv_timer_t?
+---@field timer uv.uv_timer_t?
+---@field retry uv.uv_timer_t?
 ---@field attempt integer
 ---@field class x18n.FileClass
 ---@field result x18n.DecorationsResult?
@@ -59,7 +60,7 @@ local util = require 'x18n.util'
 ---@field last_non_origin x18n.ShowMode
 ---@field buffers table<integer, x18n.BufferView>
 ---@field windows x18n.WindowBook
----@field cursor_timer uv_timer_t?
+---@field cursor_timer uv.uv_timer_t?
 ---@field eol x18n.LocaleEol
 
 ---@class x18n.Concealed
@@ -146,7 +147,7 @@ local function clear(bufnr)
   end
 end
 
----@param timer uv_timer_t?
+---@param timer uv.uv_timer_t?
 local function stop_timer(timer)
   if timer and not timer:is_closing() then
     timer:stop()
@@ -359,6 +360,9 @@ local function shape_for(bufnr, rule, d, cursor_row, skip)
     }
   end
   local expression = d.expression or d.range
+  if not expression then
+    return nil
+  end
   local line, col = util.to_byte(bufnr, expression['end'])
   if cursor_row == line and rule.cursor == 'hidden' then
     return nil
@@ -497,7 +501,7 @@ end
 ---@param client vim.lsp.Client
 ---@param on_result fun(keys: table[]?)?
 local function request_file_keys(bufnr, client, on_result)
-  client:request('x18n/fileKeys', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
+  lsp.custom_request(client, 'x18n/fileKeys', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
     require('x18n').debug(
       ('fileKeys buf=%d err=%s keys=%s'):format(bufnr, tostring(err), tostring(result and result.keys and #result.keys))
     )
@@ -554,7 +558,7 @@ function M.request(bufnr, client)
     if view.class == 'locale' then
       return request_file_keys(bufnr, client)
     end
-    client:request('x18n/decorations', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
+    lsp.custom_request(client, 'x18n/decorations', { uri = vim.uri_from_bufnr(bufnr) }, function(err, result)
       require('x18n').debug(
         ('decorations buf=%d err=%s locale=%s n=%s'):format(
           bufnr,

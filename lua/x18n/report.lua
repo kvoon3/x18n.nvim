@@ -1,6 +1,7 @@
 local M = {}
 
 local util = require 'x18n.util'
+local lsp = require 'x18n.lsp'
 
 local function qf_item(entry, kind, label, loc)
   local range = loc and loc.range or { start = { line = 0, character = 0 } }
@@ -67,7 +68,7 @@ function M.run()
   if not client then
     return
   end
-  client:request('x18n/usageReport', {}, function(err, result)
+  lsp.custom_request(client, 'x18n/usageReport', {}, function(err, result)
     require('x18n').debug(
       ('usageReport err=%s unused=%s missing=%s'):format(
         tostring(err),

@@ -1,6 +1,7 @@
 local M = {}
 
 local util = require 'x18n.util'
+local lsp = require 'x18n.lsp'
 
 --- Extract hard strings of the current buffer into locale files.
 function M.extract()
@@ -34,7 +35,7 @@ function M.open_ui()
   if not client then
     return
   end
-  client:request('x18n/openUi', {}, function(err, result)
+  lsp.custom_request(client, 'x18n/openUi', {}, function(err, result)
     if err or not result or not result.url then
       return init.notify(err and err.message or 'the UI did not start', vim.log.levels.WARN)
     end
@@ -52,7 +53,7 @@ function M.set_display_locale(locale)
   end
   --[[ Documented as a notification, not a request: sending it as a request makes
     the server answer "Unhandled method" and stall subsequent work. ]]
-  client:notify('x18n/setDisplayLocale', { locale = locale })
+  lsp.custom_notify(client, 'x18n/setDisplayLocale', { locale = locale })
   require('x18n.locales').set_display(locale)
   init.notify('display locale: ' .. locale)
   require('x18n.decorations').refresh_attached()
@@ -156,7 +157,7 @@ function M.code_action()
   local uri = vim.uri_from_bufnr(bufnr)
   local position = { line = row - 1, character = util.to_utf16(bufnr, row - 1, col) }
   local key_done, key_at = false, nil
-  client:request('x18n/keyAt', { uri = uri, position = position }, function(err, result)
+  lsp.custom_request(client, 'x18n/keyAt', { uri = uri, position = position }, function(err, result)
     key_at = not err and result or nil
     key_done = true
   end)
@@ -284,7 +285,7 @@ local function settle_translations(handle, info)
       cursor movement, `q` dismisses, and a second invocation focuses the
       open float instead of stacking another. No border or title here:
       float styling belongs to the user's config. ]]
-    local fbuf = vim.lsp.util.open_floating_preview(lines, nil, {
+    local fbuf = vim.lsp.util.open_floating_preview(lines, '', {
       focus_id = 'x18n/translations',
     })
     if fbuf then
@@ -331,12 +332,12 @@ function M.explain()
   if not client then
     return
   end
-  client:request('x18n/explain', {}, function(err, result)
+  lsp.custom_request(client, 'x18n/explain', {}, function(err, result)
     if err then
       return init.notify(err.message, vim.log.levels.WARN)
     end
     vim.schedule(function()
-      vim.lsp.util.open_floating_preview(vim.split(result or 'nothing to explain', '\n'), nil, {
+      vim.lsp.util.open_floating_preview(vim.split(result or 'nothing to explain', '\n'), '', {
         focus_id = 'x18n/explain',
         close_events = {},
       })

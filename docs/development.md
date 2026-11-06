@@ -2,7 +2,8 @@
 
 ## Toolchain
 
-The Lua toolchain is pinned in `.mise.toml`:
+The toolchain is pinned in `.mise.toml`, including Neovim 0.12.4 and Node 24
+for the headless suite:
 
 ```sh
 mise install
@@ -17,6 +18,12 @@ run. The plugin itself is pure Lua and has no Node runtime dependency.
 - [selene](https://github.com/Kampfkarren/selene) lints Lua. `vim.yml` vendors
   the Neovim standard library selene does not ship, and `selene.toml` points at
   it with `std = "vim"`.
+- [lua-language-server](https://github.com/LuaLS/lua-language-server) checks the
+  LuaLS annotations through `scripts/typecheck.sh`.
+- [actionlint](https://github.com/rhysd/actionlint) checks the GitHub workflow.
+- `scripts/hygiene.sh` checks trailing whitespace, merge markers, final
+  newlines and oversized tracked files. Vendored `playground/` and
+  `test/fixture/` are exempt.
 - [ls-lint](https://ls-lint.org) enforces file naming (`.ls-lint.yml`):
   snake_case Lua, kebab-case Markdown, scripts and config, with `playground/`,
   `test/fixture/`, `node_modules/` and tool dotfiles ignored.
@@ -32,7 +39,10 @@ Without mise, install the tools yourself; the Makefile calls them by name.
 make hooks         # enable the pre-commit hook for this clone
 make format        # stylua, in place
 make format-check  # stylua --check
-make lint          # ls-lint + comment lint + lefthook validate + selene
+make typecheck     # lua-language-server over lua/ and plugin/
+make workflow-lint # actionlint over .github/workflows
+make hygiene       # whitespace, merge markers, final newlines, file size
+make lint          # ls-lint + comment lint + typecheck + workflow lint + hygiene
 make test          # headless test suite, published server
 make test-fork     # same suite, fork server from X18N_LSP_BIN
 make check         # format-check + lint + test
@@ -43,7 +53,8 @@ files and re-stages them (`stage_fixed`), then selene lints them, then the
 comment checker runs, then ls-lint checks the staged names. Jobs run in order,
 so selene sees the formatted result. A file with unstaged hunks is staged in
 full after formatting. The hook needs `stylua`, `selene`, `ls-lint` and `nvim`
-on `PATH`.
+on `PATH`. The type check is not in the hook; `make lint` and `make check` run
+it.
 
 ## Comments
 
@@ -52,6 +63,26 @@ for a contract note. Single-line narration (`-- ...`) is rejected by
 `make lint` and by the pre-commit hook. A comment about behavior we do not own
 names the foreign system and the exact symbol that forces it; everything else
 is code that should explain itself.
+
+## Types
+
+`make typecheck` runs lua-language-server over `lua/` and `plugin/`. The script
+generates a temporary config whose `workspace.library` points at `$VIMRUNTIME`
+and the bundled luv library, so `vim.*` and `uv.uv_timer_t` resolve without
+lazydev. Tests, skills, playground and scripts stay outside the check.
+
+LuaLS types `client:request` and `client:notify` with the standard LSP method
+union. The custom `x18n/*` calls go through `lsp.custom_request` and
+`lsp.custom_notify`, the one boundary where the method name is deliberately
+outside that union. Floating previews pass an empty syntax string because the
+stub marks the argument as required; the buffers are plain text.
+
+## CI
+
+`.github/workflows/ci.yml` runs `make check` on pushes to `main`, pull requests
+and manual dispatches. mise installs the pinned toolchain, `npm ci` installs the
+published server, and the suite runs against it. The fork lane stays local
+because it needs `X18N_LSP_BIN`.
 
 Style lives in `.stylua.toml`: LuaJIT syntax, two-space indent, 120 columns,
 single quotes, no call parentheses.

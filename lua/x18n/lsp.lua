@@ -49,6 +49,22 @@ function M.root_dir_for(markers)
   end
 end
 
+--- Send a request for a custom x18n method, outside the standard LSP union.
+---@param client vim.lsp.Client
+---@param params table
+---@param handler function
+---@param bufnr integer?
+function M.custom_request(client, method, params, handler, bufnr)
+  return client:request(method, params, handler, bufnr)
+end
+
+--- Send a notification for a custom x18n method, outside the standard LSP union.
+---@param client vim.lsp.Client
+---@param params table
+function M.custom_notify(client, method, params)
+  return client:notify(method, params)
+end
+
 local function publish_diagnostics(user_diagnostics)
   return function(err, result, ctx, config)
     local diagnostics = require('x18n').config.diagnostic

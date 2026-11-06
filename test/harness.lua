@@ -95,6 +95,7 @@ end
 local chunk = assert(loadfile(script))
 chunk {
   playground = playground_fixture,
+  plugin_root = plugin_root,
   wait_for = wait_for,
   buf = vim.api.nvim_get_current_buf(),
   upstream = upstream,

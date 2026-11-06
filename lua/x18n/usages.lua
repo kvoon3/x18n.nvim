@@ -1,6 +1,7 @@
 local M = {}
 
 local util = require 'x18n.util'
+local lsp = require 'x18n.lsp'
 
 local function describe(location)
   local path = vim.uri_to_fname(location.uri)
@@ -47,7 +48,7 @@ function M.jump_under_cursor()
     --[[ references cannot tell "not on a key" from "key with no usages"; keyAt
       can, and upstream reports the two differently. ]]
     local key, checked = nil, false
-    client:request('x18n/keyAt', {
+    lsp.custom_request(client, 'x18n/keyAt', {
       uri = vim.uri_from_bufnr(bufnr),
       position = { line = row - 1, character = util.to_utf16(bufnr, row - 1, col) },
     }, function(key_err, key_result)

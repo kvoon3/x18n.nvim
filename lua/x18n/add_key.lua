@@ -1,6 +1,7 @@
 local M = {}
 
 local util = require 'x18n.util'
+local lsp = require 'x18n.lsp'
 
 local function cursor_params(bufnr)
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
@@ -70,7 +71,7 @@ local function resolve_key(key_arg)
   end
   local key, project
   local done = false
-  client:request('x18n/keyAt', cursor_params(vim.api.nvim_get_current_buf()), function(err, result)
+  lsp.custom_request(client, 'x18n/keyAt', cursor_params(vim.api.nvim_get_current_buf()), function(err, result)
     if not err and result then
       key, project = result.key, result.project
     end
@@ -89,7 +90,7 @@ local function is_undefined(key, project)
   end
   local found = false
   local done = false
-  client:request('x18n/usageReport', {}, function(err, result)
+  lsp.custom_request(client, 'x18n/usageReport', {}, function(err, result)
     if not err then
       for _, entry in ipairs(result and result.missing or {}) do
         if entry.key == key and (project == nil or entry.project == project) then
@@ -113,7 +114,7 @@ local function key_exists(key, project)
   end
   local parent = key:match '^(.*)%.'
   local found, done = false, false
-  client:request('x18n/tree', { project = project, parent = parent }, function(err, result)
+  lsp.custom_request(client, 'x18n/tree', { project = project, parent = parent }, function(err, result)
     if not err then
       for _, node in ipairs(result or {}) do
         if node.key == key then
@@ -149,7 +150,7 @@ function M.add_one(key, locale)
   local client = require('x18n').client()
   if client then
     local done, result = false, nil
-    client:request('x18n/keyAt', cursor_params(vim.api.nvim_get_current_buf()), function(err, res)
+    lsp.custom_request(client, 'x18n/keyAt', cursor_params(vim.api.nvim_get_current_buf()), function(err, res)
       result = not err and res or nil
       done = true
     end)
