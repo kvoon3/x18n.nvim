@@ -27,8 +27,8 @@
   the executable server entry (#132) merged upstream and shipped in v0.1.11
   through v0.1.13.
 - The plugin requires `@x18n/lsp` 0.1.13 and drops the keyInfo probe, the
-  old-server fallbacks and the dedicated fork test target. The suite runs
-  against the published server; `X18N_LSP_BIN` still points it at a fork build.
+  old-server fallbacks and the separate server test target. The suite runs
+  against the published server.
 - Hover flush, component decorations and completion resolve merged upstream
   (#127, #129, #130) and shipped in v0.1.10.
 - Key details moved from standard hover to `x18n/keyInfo`.

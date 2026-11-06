@@ -54,7 +54,7 @@ Run this first whenever a result looks off; it is read-only and starts no server
 .claude/skills/verify-x18n-nvim/scripts/doctor.sh
 ```
 
-It checks Neovim, Node, `rsync`, the server binary (`X18N_LSP_BIN` or the root
+It checks Neovim, Node, `rsync`, the server binary (the root
 `node_modules/@x18n/lsp/bin.mjs`) and its resolved `dist/index.mjs`, the builtins
 build, the `x18n` CLI, all eight playground directories, and that
 `nvim --clean --headless` starts. The last line is `ready` or `not ready`; the
@@ -88,8 +88,8 @@ For each project the checker:
 1. rsyncs `playground/<project>` to `$TMPDIR/x18n-verify.*/<project>`;
 2. starts `nvim --clean --headless` with a 300x600 grid, prepends the plugin,
    disables diagnostic virtual text/signs (so the screen contains only decoration
-   text), and configures the server binary (`X18N_LSP_BIN` or the root
-   devDependency) and project root markers;
+   text), and configures the server binary (the root devDependency) and project
+   root markers;
 3. opens every file in `scripts/playgrounds.lua`, runs `filetype detect`, and
    waits for the x18n client and decoration extmarks;
 4. reads `x18n/projects`, determines the file's project and locale list, and sets

@@ -8,7 +8,7 @@ matching feature file as the recipe.
 
 - Run from the repository root; dependencies installed with `npm install`.
 - The default server is the published `@x18n/lsp` 0.1.13 from the root
-  devDependencies. Set `X18N_LSP_BIN` to exercise another server binary.
+  devDependencies.
 - `playground/` holds the upstream examples (`scripts/sync-playground.sh`).
 - `scripts/doctor.sh` prints `ready`.
 - Every journey starts from a clean temp copy of the project. The wrapper copies

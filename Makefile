@@ -36,8 +36,7 @@ lint: ls-lint comment-lint typecheck workflow-lint hygiene
 ls-lint:
 	ls-lint
 
-# The root devDependency (@x18n/lsp 0.1.13) is the default server; set
-# X18N_LSP_BIN to run against another binary.
+# The root devDependency (@x18n/lsp 0.1.13) is the server for every test.
 test:
 	@set -e; for t in test/*.lua; do \
 		if [ "$$t" != test/harness.lua ]; then $(NVIM) -l test/harness.lua "$$t"; fi; \

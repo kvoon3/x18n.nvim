@@ -24,7 +24,7 @@ vim.notify = function() end
 vim.diagnostic.config { virtual_text = false, signs = false, underline = false }
 require('x18n').setup {
   lsp = {
-    cmd = { 'node', vim.env.X18N_LSP_BIN or (repo .. '/node_modules/@x18n/lsp/bin.mjs'), '--stdio' },
+    cmd = { 'node', repo .. '/node_modules/@x18n/lsp/bin.mjs', '--stdio' },
     root_markers = entry.markers,
   },
   decorations = { mode = 'conceal' },

@@ -22,7 +22,7 @@ vim.api.nvim_create_autocmd('VimLeavePre', {
 })
 
 vim.opt.runtimepath:prepend(plugin_root)
-local bin = vim.env.X18N_LSP_BIN or (plugin_root .. '/node_modules/@x18n/lsp/bin.mjs')
+local bin = plugin_root .. '/node_modules/@x18n/lsp/bin.mjs'
 local opts = {
   lsp = {
     cmd = { 'node', bin, '--stdio' },

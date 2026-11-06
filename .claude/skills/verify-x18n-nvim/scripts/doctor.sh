@@ -35,7 +35,7 @@ else
   bad 'rsync is not on PATH (the checker copies each project to a temp dir)'
 fi
 
-lsp_bin="${X18N_LSP_BIN:-$repo/node_modules/@x18n/lsp/bin.mjs}"
+lsp_bin="$repo/node_modules/@x18n/lsp/bin.mjs"
 resolved=
 if [ -f "$lsp_bin" ]; then
   resolved=$(node -e 'try { console.log(require("node:fs").realpathSync(process.argv[1])) } catch (e) { process.exit(1) }' "$lsp_bin" 2>/dev/null)
@@ -45,7 +45,7 @@ if [ -f "$lsp_bin" ]; then
     bad "x18n-lsp resolves to ${resolved:-<nothing>} but dist/index.mjs is missing; build the server"
   fi
 else
-  bad "missing $lsp_bin; run npm install at the repo root, or check X18N_LSP_BIN"
+  bad "missing $lsp_bin; run npm install at the repo root"
 fi
 
 # A workspace checkout keeps builtins in a sibling package; the published
