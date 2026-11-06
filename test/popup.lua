@@ -60,9 +60,9 @@ local parent_win = vim.api.nvim_get_current_win()
 local fwin = vim.b[ctx.buf].lsp_floating_preview
 assert(fwin and vim.api.nvim_win_is_valid(fwin), 'float window missing')
 vim.api.nvim_set_current_win(fwin)
-vim.fn.setreg('+', '')
+vim.fn.setreg('"', '')
 vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-y>', true, false, true), 'x', false)
-assert(vim.fn.getreg '+' == 'app.title', 'popup copy-key copied: ' .. vim.fn.getreg '+')
+assert(vim.fn.getreg '"' == 'app.title', 'popup copy-key copied: ' .. vim.fn.getreg '"')
 vim.api.nvim_set_current_win(parent_win)
 
 assert(hover_buf() ~= nil, 'hover float missing before the move')

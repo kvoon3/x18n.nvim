@@ -24,22 +24,22 @@ local function only()
   vim.cmd('edit ' .. ctx.playground .. '/src/main.js')
 end
 
-vim.fn.setreg('+', '')
+vim.fn.setreg('"', '')
 keys.pick 'copy_key'
 assert(
   ctx.wait_for(function()
-    return vim.fn.getreg '+' == 'app.title'
+    return vim.fn.getreg '"' == 'app.title'
   end, 5000),
   'copy_key failed'
 )
 
-vim.fn.setreg('+', '')
+vim.fn.setreg('"', '')
 keys.pick 'copy_translation'
 assert(
   ctx.wait_for(function()
-    return vim.fn.getreg '+' == 'Hello x18n'
+    return vim.fn.getreg '"' == 'Hello x18n'
   end, 8000),
-  'copy_translation failed: ' .. vim.fn.getreg '+'
+  'copy_translation failed: ' .. vim.fn.getreg '"'
 )
 
 actions.set_display_locale 'ja'
@@ -49,13 +49,13 @@ assert(
   end, 3000),
   'display locale did not switch to ja'
 )
-vim.fn.setreg('+', '')
+vim.fn.setreg('"', '')
 keys.pick 'copy_translation'
 assert(
   ctx.wait_for(function()
-    return vim.fn.getreg '+' == 'こんにちは x18n'
+    return vim.fn.getreg '"' == 'こんにちは x18n'
   end, 8000),
-  'copy_translation ignored ja: ' .. vim.fn.getreg '+'
+  'copy_translation ignored ja: ' .. vim.fn.getreg '"'
 )
 actions.set_display_locale 'en'
 assert(
@@ -111,11 +111,11 @@ local original_key_info = locales.key_info
 locales.key_info = function(_, _, _, on_result)
   on_result(nil)
 end
-vim.fn.setreg('+', '')
+vim.fn.setreg('"', '')
 keys.pick 'copy_translation'
 vim.wait(1000, function()
   return false
 end, 50)
-assert(vim.fn.getreg '+' == '', 'copy_translation copied without keyInfo: ' .. vim.fn.getreg '+')
+assert(vim.fn.getreg '"' == '', 'copy_translation copied without keyInfo: ' .. vim.fn.getreg '"')
 locales.key_info = original_key_info
 print 'keys ok'
