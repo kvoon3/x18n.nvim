@@ -29,14 +29,23 @@ local up = { label = '.. (up)', up = true }
 --- Reduce a TreeNode at the protocol boundary. A node without a string key is
 --- dropped: every later request and jump needs that key.
 ---@param raw table
+---@param parent string? the key used for this level
 ---@return x18n.TreeChild?
-local function parse_child(raw)
+local function parse_child(raw, parent)
   if type(raw) ~= 'table' or type(raw.key) ~= 'string' then
     return nil
   end
+  local label = type(raw.label) == 'string' and raw.label or raw.key
+  --[[ @x18n/lsp 0.1.13 computes TreeNode.label by slicing one character after
+    the parent, but a namespace parent (`auth:`) has no separator. The server
+    returns `ogin` for key `auth:login` under parent `auth:`; derive the label
+    from the full key until TreeNode.label is fixed upstream. ]]
+  if parent and parent:sub(-1) == ':' and raw.key:sub(1, #parent) == parent then
+    label = raw.key:sub(#parent + 1):gsub(':$', '')
+  end
   return {
     key = raw.key,
-    label = type(raw.label) == 'string' and raw.label or raw.key,
+    label = label,
     leaf = raw.leaf == true,
     translated = tonumber(raw.translated) or 0,
     total = tonumber(raw.total) or 0,
@@ -152,7 +161,7 @@ local function open_level(session, trail)
     end
     local children = {}
     for _, raw in ipairs(result or {}) do
-      local child = parse_child(raw)
+      local child = parse_child(raw, parent)
       if child then
         children[#children + 1] = child
       end

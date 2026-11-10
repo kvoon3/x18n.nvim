@@ -200,6 +200,41 @@ end)
 assert(#selects == before + 1, 'cancel opened another level')
 assert(#notes == notes_before, 'cancel notified')
 
+local real_request = require('x18n.lsp').custom_request
+require('x18n.lsp').custom_request = function(client, method, params, handler)
+  if method ~= 'x18n/tree' then
+    return real_request(client, method, params, handler)
+  end
+  if params.parent == nil then
+    handler(nil, { { key = 'auth:', label = 'auth', leaf = false, translated = 0, total = 1 } })
+  else
+    handler(nil, {
+      { key = 'auth:login', label = 'ogin', leaf = false, translated = 0, total = 1 },
+      { key = 'auth:logout', label = 'ogout', leaf = true, translated = 0, total = 1 },
+    })
+  end
+end
+before = #selects
+plan = {
+  function(items)
+    return find_row(items, 'auth')
+  end,
+  function()
+    return nil
+  end,
+}
+tree.open 'playground'
+assert(
+  ctx.wait_for(function()
+    return #selects == before + 2
+  end, 5000),
+  'namespace drill never opened'
+)
+local namespaced = row_texts(selects[#selects])
+assert(namespaced[2] == '▸ login  (0/1)', 'namespace child label wrong: ' .. namespaced[2])
+assert(namespaced[3] == 'logout = —  (0/1)', 'namespace leaf label wrong: ' .. namespaced[3])
+require('x18n.lsp').custom_request = real_request
+
 require('x18n.lsp').stop()
 assert(
   ctx.wait_for(function()
