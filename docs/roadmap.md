@@ -1,10 +1,8 @@
 # Roadmap
 
-## Now: editor features
+## Now
 
-- Locale tree explorer through `x18n/tree`.
-- Review threads through `x18n/reviews`.
-- Copy translate prompt through `x18n/translatePrompt`.
+Nothing queued. Pick from Later, or audit a new server release.
 
 ## Later
 
@@ -22,6 +20,9 @@
 
 ## Done
 
+- The editor surfaces: review threads in the quickfix (`:X18nReviews`), the
+  locale tree explorer (`:X18nTree`) and the translate-prompt copy
+  (`:X18nCopyTranslatePrompt`).
 - Usage counts in `x18n/fileKeys` (#133), `x18n/keyInfo` (#135), static param
   values and param-filled decoration and inlay-hint values (#139, #140), and
   the executable server entry (#132) merged upstream and shipped in v0.1.11

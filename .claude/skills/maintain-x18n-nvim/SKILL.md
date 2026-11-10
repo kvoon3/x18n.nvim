@@ -32,6 +32,9 @@ Snapshot: 0.1.13, 2026-11-06.
 - `lua/x18n/init.lua` holds the default `lsp.filetypes` attach list.
 - `lua/x18n/decorations.lua` skips `x18n.config.*` buffers. Published 0.1.13
   scans its own config as source and returns missing keys for it.
+- `lua/x18n/tree.lua` derives a namespace child's label from the full key.
+  Published 0.1.13 slices `TreeNode.label` one character past a `:`-parent
+  (`auth:login` under `auth:` arrives as `ogin`).
 - `x18n/keyInfo` returns the raw message in 0.1.13. Decorations and inlay hints
   fill static call params. The translations popup shows `keyInfo` values as the
   server returns them.
