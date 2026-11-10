@@ -23,6 +23,20 @@ vim.api.nvim_create_user_command('X18nUsageReport', function()
   require('x18n.report').run()
 end, { desc = 'x18n: list missing and unused keys in the quickfix' })
 
+vim.api.nvim_create_user_command('X18nReviews', function(a)
+  if a.args ~= '' and a.args ~= 'open' then
+    require('x18n').notify('unknown review filter: ' .. a.args, vim.log.levels.WARN)
+    return
+  end
+  require('x18n.reviews').run { open = a.args == 'open' }
+end, {
+  nargs = '?',
+  complete = function()
+    return { 'open' }
+  end,
+  desc = 'x18n: list review threads in the quickfix',
+})
+
 vim.api.nvim_create_user_command('X18nSearch', function(a)
   require('x18n.search').run(a.args)
 end, { nargs = '?', desc = 'x18n: search keys by translated value' })

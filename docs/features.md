@@ -54,6 +54,15 @@ picker when several files use it.
 Missing and unused keys as a quickfix list, with jumps into the exact locale
 files.
 
+## Review threads
+
+`:X18nReviews` lists every review thread of the workspace in a quickfix titled
+`x18n reviews`, one row per thread with its state, key, locale and newest
+comment. Enter opens the thread's locale key; a thread whose locale does not
+have the message yet stays listed with ` (no location)` instead of pointing at
+a broken position. `:X18nReviews open` keeps only unresolved threads. The list
+is read-only: review authoring stays in the CLI.
+
 ## Value search
 
 Fuzzy search by translated value, pick a result and jump to its definition.

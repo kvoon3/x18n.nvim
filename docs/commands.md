@@ -14,6 +14,7 @@
 | `:X18nAddKey [key]` | Batch prompt for the key under the cursor (or the given key) in every locale |
 | `:X18nKeys [action]` | Pick a key; `jump` (default), `split`, `vsplit`, `tab`, `copy`, `copy_translation`, `choose_locale` |
 | `:X18nUsageReport` | List missing and unused keys in the quickfix |
+| `:X18nReviews [open]` | List review threads in the quickfix; `open` keeps unresolved threads |
 | `:X18nSearch [query]` | Search keys by translated value, jump to the chosen definition |
 | `:X18nExtract` | Extract hard strings of the current buffer into locale files |
 | `:X18nNextLocale` | Cycle the display locale |
@@ -57,6 +58,9 @@ vim.keymap.set('n', 'gu', function()
 end)
 vim.keymap.set('n', '<leader>tk', function()
   require('x18n.keys').pick 'choose_locale'
+end)
+vim.keymap.set('n', '<leader>xr', function()
+  require('x18n.reviews').run { open = true }
 end)
 ```
 

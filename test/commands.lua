@@ -8,6 +8,7 @@ local commands = {
   'X18nReload',
   'X18nExtract',
   'X18nUsageReport',
+  'X18nReviews',
   'X18nSearch',
   'X18nDisplayLocale',
   'X18nNextLocale',

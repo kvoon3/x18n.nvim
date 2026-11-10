@@ -1,0 +1,28 @@
+x18n: 1
+threads:
+  app.title:
+    ja:
+      - id: title1
+        type: request-change
+        author: { name: Ada }
+        time: '2026-01-02T03:04:05Z'
+        text: Please use the formal greeting
+  app.description:
+    fr:
+      - id: descr1
+        type: suggestion
+        time: '2026-01-03T03:04:05Z'
+        suggestion: Un terrain de jeu
+  app.greeting:
+    zh-CN:
+      - id: greet1
+        type: comment
+        time: '2026-01-04T03:04:05Z'
+        text: Reviewed already
+        resolved: true
+  app.ghost:
+    fr:
+      - id: ghost1
+        type: comment
+        time: '2026-01-05T03:04:05Z'
+        text: Key missing from the resources
