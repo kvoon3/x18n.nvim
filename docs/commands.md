@@ -15,6 +15,7 @@
 | `:X18nKeys [action]` | Pick a key; `jump` (default), `split`, `vsplit`, `tab`, `copy`, `copy_translation`, `choose_locale` |
 | `:X18nUsageReport` | List missing and unused keys in the quickfix |
 | `:X18nReviews [open]` | List review threads in the quickfix; `open` keeps unresolved threads |
+| `:X18nTree [project]` | Browse the key tree one level at a time (project name for monorepos) |
 | `:X18nSearch [query]` | Search keys by translated value, jump to the chosen definition |
 | `:X18nExtract` | Extract hard strings of the current buffer into locale files |
 | `:X18nNextLocale` | Cycle the display locale |
@@ -61,6 +62,9 @@ vim.keymap.set('n', '<leader>tk', function()
 end)
 vim.keymap.set('n', '<leader>xr', function()
   require('x18n.reviews').run { open = true }
+end)
+vim.keymap.set('n', '<leader>xt', function()
+  require('x18n.tree').open()
 end)
 ```
 

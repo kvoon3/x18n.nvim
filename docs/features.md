@@ -63,6 +63,15 @@ have the message yet stays listed with ` (no location)` instead of pointing at
 a broken position. `:X18nReviews open` keeps only unresolved threads. The list
 is read-only: review authoring stays in the CLI.
 
+## Key tree
+
+`:X18nTree` opens the project's key tree in `vim.ui.select`: namespace rows
+show their translated/total progress and open the children, leaf rows show the
+display-locale value and open the key's definition. `.. (up)` returns one
+level, and the picker prompt carries the breadcrumb. Only one level is fetched
+per step, so the whole project never loads up front. `:X18nTree <project>`
+picks a project in a monorepo.
+
 ## Value search
 
 Fuzzy search by translated value, pick a result and jump to its definition.
