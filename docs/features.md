@@ -72,6 +72,16 @@ level, and the picker prompt carries the breadcrumb. Only one level is fetched
 per step, so the whole project never loads up front. `:X18nTree <project>`
 picks a project in a monorepo.
 
+## Translate prompt
+
+`:X18nCopyTranslatePrompt` copies the server's translate prompt for the display
+locale into the `"` and `+` registers and announces the locale. On an x18n
+buffer the prompt narrows to the key under the cursor; elsewhere it covers the
+whole project. `:X18nCopyTranslatePrompt <locale>` targets another locale, and
+completion lists the project locales. The prompt is server-policy markdown,
+copied byte for byte; when there is nothing left to translate it warns and
+leaves the registers alone.
+
 ## Value search
 
 Fuzzy search by translated value, pick a result and jump to its definition.

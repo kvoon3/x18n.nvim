@@ -10,6 +10,7 @@ local commands = {
   'X18nUsageReport',
   'X18nReviews',
   'X18nTree',
+  'X18nCopyTranslatePrompt',
   'X18nSearch',
   'X18nDisplayLocale',
   'X18nNextLocale',

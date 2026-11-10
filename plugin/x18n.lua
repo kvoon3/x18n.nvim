@@ -41,6 +41,21 @@ vim.api.nvim_create_user_command('X18nTree', function(a)
   require('x18n.tree').open(a.args ~= '' and a.args or nil)
 end, { nargs = '?', desc = 'x18n: browse the key tree' })
 
+vim.api.nvim_create_user_command('X18nCopyTranslatePrompt', function(a)
+  require('x18n.translate_prompt').copy(a.args ~= '' and a.args or nil)
+end, {
+  nargs = '?',
+  complete = function()
+    local locales = require 'x18n.locales'
+    local list = locales.cached()
+    if #list == 0 then
+      locales.warm()
+    end
+    return list
+  end,
+  desc = 'x18n: copy the translate prompt for a locale',
+})
+
 vim.api.nvim_create_user_command('X18nSearch', function(a)
   require('x18n.search').run(a.args)
 end, { nargs = '?', desc = 'x18n: search keys by translated value' })
