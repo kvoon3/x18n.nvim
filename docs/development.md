@@ -55,6 +55,24 @@ full after formatting. The hook needs `stylua`, `selene`, `ls-lint` and `nvim`
 on `PATH`. The type check is not in the hook; `make lint` and `make check` run
 it.
 
+## Verifying a branch locally
+
+`make dev` starts a clean Neovim for the checkout it runs in. It skips the user
+config, shada, packages and every other plugin, then loads this checkout and the
+server pinned in `node_modules/@x18n/lsp`. The editor shows exactly the branch
+under test, not the checkout your daily config points at.
+
+```sh
+make dev
+make dev ARGS=playground/react-i18next/src/Login.tsx
+```
+
+With no `ARGS`, Neovim starts with the checkout as its working directory. `ARGS`
+is split by the shell, so quote an argument that contains spaces. If
+`node_modules` is missing, `scripts/dev_init.lua` warns and falls back to
+`x18n-lsp` on `PATH`. `:checkhealth x18n` reports `plugin <path>`, so the active
+checkout is visible before you test hovers or decorations.
+
 ## Comments
 
 Lua comments carry a form, not a mood: `---` for LuaLS docs and `--[[ ... ]]`

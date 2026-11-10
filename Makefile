@@ -1,7 +1,7 @@
 LUA_DIRS := lua plugin test scripts .claude/skills/verify-x18n-nvim/scripts
 NVIM ?= nvim
 
-.PHONY: all check comment-lint format format-check hooks hygiene lint ls-lint test typecheck workflow-lint
+.PHONY: all check comment-lint dev format format-check hooks hygiene lint ls-lint test typecheck workflow-lint
 
 all: check
 
@@ -41,3 +41,6 @@ test:
 	@set -e; for t in test/*.lua; do \
 		if [ "$$t" != test/harness.lua ]; then $(NVIM) -l test/harness.lua "$$t"; fi; \
 	done
+
+dev:
+	$(NVIM) -i NONE -u "$(CURDIR)/scripts/dev_init.lua" $(ARGS)
