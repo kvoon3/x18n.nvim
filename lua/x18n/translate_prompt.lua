@@ -122,7 +122,7 @@ function M.copy(locale_arg)
     return false
   end
   local key, key_project = key_at_cursor()
-  local resolved = target(projects, key and key_project or nil, locale_arg)
+  local resolved = target(projects, key_project, locale_arg)
   if not resolved then
     return false
   end
