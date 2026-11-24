@@ -13,6 +13,9 @@ code lens, inlay hints, diagnostics), which Neovim handles natively. This plugin
 adds what standard LSP cannot express: the custom `x18n/*` protocol as editor
 UI.
 
+Try the plugin, the server and Neovim in the browser:
+<https://x18n-nvim-play.kvoon.workers.dev>.
+
 ## Features
 
 - **Inline translations** — `t('app.title')` reads as `t(Hello x18n)` in the
