@@ -1,9 +1,5 @@
 # x18n.nvim
 
-> [!WARNING]
-> This project is under active development. Commands, options and the Lua API
-> may change between releases.
-
 [Neovim](https://neovim.io) integration for [x18n](https://x18n.dev) — an i18n
 toolkit that reads a project's locale files, reports missing, unused and broken
 keys, and edits them safely.
